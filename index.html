@@ -1059,13 +1059,7 @@ async function fetchLivePrices() {
     document.getElementById('precio-status').textContent = 'Conectando IOL…';
     document.getElementById('precio-status').style.color = 'var(--text3)';
 
-    // No timeout — el proxy de Google puede tardar hasta 20s en primera carga
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      document.getElementById('precio-status').textContent = 'IOL — consultando bonos…';
-    }, 5000);
-    const res = await fetch(PROXY_URL, { signal: controller.signal });
-    clearTimeout(timer);
+    const res = await fetch(PROXY_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
