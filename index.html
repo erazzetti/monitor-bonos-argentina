@@ -1061,16 +1061,26 @@ async function fetchLivePrices() {
     document.getElementById('precio-status').textContent = 'Conectando IOL…';
     document.getElementById('precio-status').style.color = 'var(--text3)';
 
-    const res = await fetch(PROXY_URL, { signal: AbortSignal.timeout(30000) });
+    const res = await fetch(PROXY_URL, { signal: AbortSignal.timeout(35000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Error del proxy');
 
-    // Cargar precios en livePrices y actualizar BONDS
+    // Actualizar MEP desde IOL
+    if (data.mep && data.mep > 0) {
+      CONFIG.tcMep = data.mep;
+      const mepStr = '$' + data.mep.toLocaleString('es-AR', {maximumFractionDigits:0});
+      document.getElementById('tc-mep').textContent   = mepStr;
+      document.getElementById('d-tc-mep').textContent = mepStr;
+      const brecha = ((data.mep / CONFIG.tcOficial - 1) * 100).toFixed(1);
+      document.getElementById('d-brecha').textContent = brecha + '%';
+    }
+
+    // Cargar precios y actualizar BONDS
     let actualizados = 0;
     Object.entries(data.precios).forEach(([ticker, info]) => {
-      if (info.p) {
+      if (info.p && info.p > 0) {
         livePrices[ticker] = info.p;
         actualizados++;
       }
@@ -1080,7 +1090,7 @@ async function fetchLivePrices() {
 
     document.getElementById('precio-status').textContent = `IOL ✓ (${actualizados} bonos)`;
     document.getElementById('precio-status').style.color = 'var(--verde)';
-    document.getElementById('last-update').textContent = `Actualizado ${data.hora}`;
+    document.getElementById('last-update').textContent   = `Actualizado ${data.hora} (IOL)`;
 
     // Auto-refresh cada 5 minutos
     setTimeout(() => fetchLivePrices().then(() => {
@@ -1094,7 +1104,6 @@ async function fetchLivePrices() {
     console.warn('Proxy IOL error:', e.message);
     document.getElementById('precio-status').textContent = 'IOL sin conexión — datos base';
     document.getElementById('precio-status').style.color = 'var(--oro)';
-    // Reintentar en 2 minutos si falla
     setTimeout(() => fetchLivePrices(), 2 * 60 * 1000);
     return false;
   }
