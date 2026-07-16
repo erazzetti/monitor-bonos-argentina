@@ -1061,7 +1061,13 @@ async function fetchLivePrices() {
     document.getElementById('precio-status').textContent = 'Conectando IOL…';
     document.getElementById('precio-status').style.color = 'var(--text3)';
 
-    const res = await fetch(PROXY_URL, { signal: AbortSignal.timeout(35000) });
+    // No timeout — el proxy de Google puede tardar hasta 20s en primera carga
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      document.getElementById('precio-status').textContent = 'IOL — consultando bonos…';
+    }, 5000);
+    const res = await fetch(PROXY_URL, { signal: controller.signal });
+    clearTimeout(timer);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
@@ -1632,15 +1638,20 @@ function calcBreakeven() {
    INIT
 ══════════════════════════════════════════════════════════ */
 async function init() {
-  // Intento precios en vivo (falla silenciosamente si no hay internet)
-  fetchLivePrices().then(() => {
-    buildDashboard();
-    buildBondTable();
-  });
-
-  // Render inmediato con datos base
+  // Render inmediato con datos base (sin esperar IOL)
   buildDashboard();
   buildBondTable();
+
+  // Carga de precios en background — no bloquea el render
+  fetchLivePrices().then(ok => {
+    if (ok) {
+      buildDashboard();
+      buildBondTable();
+    }
+  }).catch(() => {
+    document.getElementById('precio-status').textContent = 'IOL sin conexión — datos base';
+    document.getElementById('precio-status').style.color = 'var(--oro)';
+  });
   renderCarteraRows();
   calcMEP();
   calcBreakeven();
