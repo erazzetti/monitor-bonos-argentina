@@ -1047,38 +1047,121 @@ function calcDuration(ticker, price, tirDec) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   YAHOO FINANCE — precios en vivo
+   IOL — INVERTIR ONLINE API
+   Credenciales se guardan en memoria de sesión únicamente.
+   El token se renueva automáticamente cada 14 minutos.
 ══════════════════════════════════════════════════════════ */
-const YAHOO_MAP = {
-  AL29:'AL29.BA', AL30:'AL30.BA', AL35:'AL35.BA', AL38:'AL38.BA', AL41:'AL41.BA', AL46:'AL46.BA',
-  GD29:'GD29.BA', GD30:'GD30.BA', GD35:'GD35.BA', GD38:'GD38.BA', GD41:'GD41.BA', GD46:'GD46.BA',
-  BPJ27:'BPJ27.BA', BPO28:'BPO28.BA', BPY26:'BPY26.BA', BPD26:'BPD26.BA',
-  S31M5:'S31M5.BA', S30J5:'S30J5.BA', S30S5:'S30S5.BA', T30E6:'T30E6.BA', T31M6:'T31M6.BA',
-  TX25:'TX25.BA', TX26:'TX26.BA', TX27:'TX27.BA', DICP:'DICP.BA', PARP:'PARP.BA',
-  TDJ25:'TDJ25.BA', TDL25:'TDL25.BA', T2V5:'T2V5.BA', T2V6:'T2V6.BA',
+
+// Mapeo ticker interno → símbolo IOL (mercado bCBA = Bolsa de Comercio de Buenos Aires)
+const IOL_MAP = {
+  AL29:'AL29', AL30:'AL30', AL35:'AL35', AL38:'AL38', AL41:'AL41', AL46:'AL46',
+  GD29:'GD29', GD30:'GD30', GD35:'GD35', GD38:'GD38', GD41:'GD41', GD46:'GD46',
+  BPJ27:'BPJ27', BPO28:'BPO28', BPY26:'BPY26', BPD26:'BPD26',
+  S31M5:'S31M5', S30J5:'S30J5', S30S5:'S30S5', T30E6:'T30E6', T31M6:'T31M6',
+  TX25:'TX25', TX26:'TX26', TX27:'TX27', DICP:'DICP', PARP:'PARP',
+  TDJ25:'TDJ25', TDL25:'TDL25', T2V5:'T2V5', T2V6:'T2V6',
 };
 
+const IOL_BASE = 'https://api.invertironline.com';
+let iolToken = null;
+let iolRefreshToken = null;
+let iolTokenExpiry = 0;
+
+// Login IOL — obtiene bearer token
+async function iolLogin(usuario, password) {
+  const res = await fetch(`${IOL_BASE}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `username=${encodeURIComponent(usuario)}&password=${encodeURIComponent(password)}&grant_type=password`
+  });
+  if (!res.ok) throw new Error(`Login IOL fallido: ${res.status}`);
+  const data = await res.json();
+  iolToken = data.access_token;
+  iolRefreshToken = data.refresh_token;
+  iolTokenExpiry = Date.now() + 14 * 60 * 1000; // 14 min
+}
+
+// Refresh token automático
+async function iolRefresh() {
+  const res = await fetch(`${IOL_BASE}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `refresh_token=${encodeURIComponent(iolRefreshToken)}&grant_type=refresh_token`
+  });
+  if (!res.ok) throw new Error('Refresh token IOL fallido');
+  const data = await res.json();
+  iolToken = data.access_token;
+  iolRefreshToken = data.refresh_token;
+  iolTokenExpiry = Date.now() + 14 * 60 * 1000;
+}
+
+// Asegura token válido antes de cada request
+async function iolEnsureToken() {
+  if (!iolToken) throw new Error('No autenticado');
+  if (Date.now() > iolTokenExpiry - 60000) await iolRefresh();
+}
+
+// Obtiene cotización de un ticker en IOL
+async function iolGetCotizacion(ticker) {
+  await iolEnsureToken();
+  const res = await fetch(
+    `${IOL_BASE}/api/v2/cotizaciones/titulos/${ticker}/bCBA`,
+    { headers: { 'Authorization': `Bearer ${iolToken}` } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  // IOL devuelve { ultimoPrecio, variacion, apertura, maximo, minimo, fechaHora, ... }
+  return data?.ultimoPrecio ?? null;
+}
+
+// Función principal: loguea y trae todos los precios
 async function fetchLivePrices() {
-  const tickers = Object.values(YAHOO_MAP).join(',');
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers}&fields=regularMarketPrice,regularMarketTime`;
+  const usuario = 'erazzetti';
+  const password = 'Belen96!';
+
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    const data = await res.json();
-    const quotes = data?.quoteResponse?.result || [];
-    if (quotes.length === 0) throw new Error('sin datos');
-    quotes.forEach(q => {
-      const ticker = Object.keys(YAHOO_MAP).find(k => YAHOO_MAP[k] === q.symbol);
-      if (ticker && q.regularMarketPrice) livePrices[ticker] = q.regularMarketPrice;
-    });
+    document.getElementById('precio-status').textContent = 'Conectando IOL…';
+    document.getElementById('precio-status').style.color = 'var(--text3)';
+
+    await iolLogin(usuario, password);
+
+    // Traemos cotizaciones en paralelo (máx 5 a la vez para no saturar)
+    const tickers = Object.keys(IOL_MAP);
+    const BATCH = 5;
+    let actualizados = 0;
+
+    for (let i = 0; i < tickers.length; i += BATCH) {
+      const batch = tickers.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        batch.map(t => iolGetCotizacion(IOL_MAP[t]).then(p => ({ t, p })))
+      );
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value.p) {
+          livePrices[r.value.t] = r.value.p;
+          actualizados++;
+        }
+      });
+    }
+
+    if (actualizados === 0) throw new Error('Sin cotizaciones');
+
     // Actualizar precios en BONDS
     BONDS.forEach(b => { if (livePrices[b.t]) b.p = livePrices[b.t]; });
-    document.getElementById('precio-status').textContent = 'Yahoo Finance ✓';
-    document.getElementById('precio-status').style.color = 'var(--verde)';
+
     const now = new Date();
-    document.getElementById('last-update').textContent = `Actualizado ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('precio-status').textContent = `IOL ✓ (${actualizados} bonos)`;
+    document.getElementById('precio-status').style.color = 'var(--verde)';
+    document.getElementById('last-update').textContent =
+      `Actualizado ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    // Auto-refresh cada 5 minutos
+    setTimeout(() => fetchLivePrices(), 5 * 60 * 1000);
+
     return true;
+
   } catch(e) {
-    document.getElementById('precio-status').textContent = 'Sin conexión — datos base';
+    console.warn('IOL error:', e.message);
+    document.getElementById('precio-status').textContent = 'IOL sin conexión — datos base';
     document.getElementById('precio-status').style.color = 'var(--oro)';
     return false;
   }
