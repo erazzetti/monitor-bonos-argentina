@@ -1,133 +1,1661 @@
-// ═══════════════════════════════════════════════════════════════
-// IOL PROXY — Google Apps Script v5 — OPTIMIZADO
-// Usa el endpoint de listado completo en vez de consultar uno a uno
-// ═══════════════════════════════════════════════════════════════
-
-const IOL_USER = 'erazzetti';
-const IOL_PASS = 'Belen96!';
-const IOL_BASE = 'https://api.invertironline.com';
-
-const TICKERS_HD  = ['AL29','AL30','AL35','AL38','AL41','AL46','GD29','GD30','GD35','GD38','GD41','GD46','BPJ27','BPO28','BPY26','BPD26'];
-const TICKERS_ARS = ['S31M5','S30J5','S30S5','T30E6','T31M6','TX25','TX26','TX27','DICP','PARP','TDJ25','TDL25','T2V5','T2V6'];
-
-const CACHE = CacheService.getScriptCache();
-
-function getToken() {
-  const cached = CACHE.get('iol_token');
-  if (cached) return cached;
-  const res = UrlFetchApp.fetch(`${IOL_BASE}/token`, {
-    method: 'post',
-    contentType: 'application/x-www-form-urlencoded',
-    payload: `username=${encodeURIComponent(IOL_USER)}&password=${encodeURIComponent(IOL_PASS)}&grant_type=password`,
-    muteHttpExceptions: true
-  });
-  if (res.getResponseCode() !== 200) throw new Error('Login IOL fallido');
-  const data = JSON.parse(res.getContentText());
-  CACHE.put('iol_token', data.access_token, 13 * 60);
-  return data.access_token;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Bonos · Argentina</title>
+<style>
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0b0e14;
+  --bg2:       #12161f;
+  --bg3:       #1a1f2e;
+  --border:    #252a3a;
+  --border2:   #2e3448;
+  --text:      #e8eaf0;
+  --text2:     #8b91a8;
+  --text3:     #5a6080;
+  --celeste:   #4ea8de;
+  --verde:     #3dd68c;
+  --rojo:      #e05c5c;
+  --oro:       #e6b84a;
+  --violeta:   #9b7fe8;
+  --rosa:      #e87fb5;
+  --celeste2:  #1a3a52;
+  --verde2:    #0f3324;
+  --rojo2:     #3a1818;
+  --oro2:      #3a2e10;
+  --r:         6px;
+  --font-data: 'JetBrains Mono', 'Fira Mono', 'Courier New', monospace;
 }
 
-// Trae múltiples cotizaciones en paralelo usando UrlFetchApp.fetchAll
-function getCotizaciones(tickers, token) {
-  const requests = tickers.map(ticker => ({
-    url: `${IOL_BASE}/api/v2/titulos/${ticker}/cotizacion?mercado=bCBA`,
-    headers: { 'Authorization': `Bearer ${token}` },
-    muteHttpExceptions: true
-  }));
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
-  const responses = UrlFetchApp.fetchAll(requests);
-  const result = {};
-
-  responses.forEach((res, i) => {
-    try {
-      if (res.getResponseCode() !== 200) return;
-      const data = JSON.parse(res.getContentText());
-      const precio = data.ultimoPrecio || null;
-      if (precio && precio > 0) {
-        result[tickers[i]] = {
-          precio,
-          variacion:   data.variacion      || null,
-          maximo:      data.maximo         || null,
-          minimo:      data.minimo         || null,
-          volumen:     data.volumenNominal || null,
-          fecha:       data.fechaHora      || null,
-        };
-      }
-    } catch(e) {}
-  });
-
-  return result;
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 100vh;
 }
 
-function getMEP(token) {
+/* ── TOPBAR ──────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 52px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: .3px;
+}
+.flag { font-size: 20px; }
+.topbar-brand span { color: var(--text2); font-weight: 400; font-size: 12px; margin-left: 4px; }
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text3);
+}
+.topbar-meta strong { color: var(--text2); }
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--verde);
+  animation: pulse 2s infinite;
+  display: inline-block;
+  margin-right: 4px;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── NAV TABS ────────────────────────────────────────────── */
+.nav {
+  display: flex;
+  gap: 2px;
+  padding: 0 24px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.nav-tab {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--celeste); border-bottom-color: var(--celeste); }
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.page { display: none; padding: 20px 24px 40px; max-width: 1400px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ── MACRO STRIP ─────────────────────────────────────────── */
+.macro-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.macro-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+}
+.macro-card .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.macro-card .value { font-family: var(--font-data); font-size: 18px; font-weight: 700; }
+.macro-card .sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.c-cel { color: var(--celeste); }
+.c-ver { color: var(--verde); }
+.c-oro { color: var(--oro); }
+.c-vio { color: var(--violeta); }
+.c-ros { color: var(--rosa); }
+.c-roj { color: var(--rojo); }
+
+/* ── SEGMENT CARDS ───────────────────────────────────────── */
+.segment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.seg-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.seg-card:hover { border-color: var(--celeste); background: var(--bg3); }
+.seg-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.seg-name { font-weight: 600; font-size: 13px; }
+.seg-badge {
+  font-size: 10px;
+  font-family: var(--font-data);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.badge-usd { background: var(--celeste2); color: var(--celeste); }
+.badge-ars { background: var(--verde2); color: var(--verde); }
+.badge-bop { background: var(--oro2); color: var(--oro); }
+.seg-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.seg-m { }
+.seg-m .ml { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+.seg-m .mv { font-family: var(--font-data); font-size: 15px; font-weight: 700; margin-top: 1px; }
+.seg-m .ms { font-size: 10px; color: var(--text3); }
+
+/* ── SECTION TITLE ───────────────────────────────────────── */
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text3);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── YIELD CURVE CHART ───────────────────────────────────── */
+.chart-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.chart-title { font-size: 12px; font-weight: 600; }
+.chart-legend { display: flex; gap: 16px; font-size: 10px; }
+.legend-item { display: flex; align-items: center; gap: 5px; color: var(--text2); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+canvas { width: 100% !important; }
+
+/* ── TABLA BONOS ─────────────────────────────────────────── */
+.table-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.search-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  padding: 7px 12px;
+  font-size: 12px;
+  width: 200px;
+  outline: none;
+}
+.search-box:focus { border-color: var(--celeste); }
+.filter-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text2);
+  padding: 6px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.filter-btn:hover, .filter-btn.active {
+  border-color: var(--celeste);
+  color: var(--celeste);
+  background: var(--celeste2);
+}
+.table-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: auto;
+}
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border2);
+  cursor: pointer;
+  user-select: none;
+}
+thead th:hover { color: var(--text); }
+thead th.sorted { color: var(--celeste); }
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .1s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg3); }
+tbody td { padding: 9px 12px; white-space: nowrap; }
+.td-ticker {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 12px;
+}
+.td-num { font-family: var(--font-data); text-align: right; }
+.td-name { color: var(--text2); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.tir-val { font-family: var(--font-data); font-weight: 700; }
+.bar-cell { display: flex; align-items: center; gap: 6px; }
+.mini-bar-bg { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; min-width: 40px; }
+.mini-bar { height: 4px; border-radius: 2px; background: var(--celeste); }
+.tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.tag-ny  { background: var(--celeste2); color: var(--celeste); }
+.tag-arg { background: var(--verde2); color: var(--verde); }
+.tag-tf  { background: var(--oro2); color: var(--oro); }
+.tag-cer { background: #2a1f3a; color: var(--violeta); }
+.tag-dl  { background: #1f2e3a; color: var(--rosa); }
+.tag-dual{ background: #2a1f2a; color: var(--rosa); }
+.tag-bop { background: var(--oro2); color: var(--oro); }
+
+/* ── SIMULADOR ───────────────────────────────────────────── */
+.sim-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media(max-width:900px){ .sim-layout { grid-template-columns: 1fr; } }
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text3);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.field input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.field input:focus { border-color: var(--celeste); }
+.field input.readonly { color: var(--text2); background: var(--bg); cursor: default; }
+
+.btn-primary {
+  width: 100%;
+  background: var(--celeste);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--r);
+  padding: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+  margin-top: 4px;
+}
+.btn-primary:hover { opacity: .85; }
+
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.result-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+}
+.result-card .rl { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+.result-card .rv { font-family: var(--font-data); font-size: 20px; font-weight: 700; margin-top: 2px; }
+.result-card .rs { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.result-wide { grid-column: 1/-1; }
+
+.sim-table-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.sim-tab {
+  padding: 5px 12px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text3);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  transition: all .15s;
+}
+.sim-tab.active { background: var(--celeste2); color: var(--celeste); border-color: var(--celeste); }
+
+.sim-subtable { display: none; }
+.sim-subtable.active { display: block; }
+
+.small-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.small-table th { background: var(--bg3); color: var(--text3); font-size: 9px; text-transform: uppercase; letter-spacing: .4px; padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+.small-table th:first-child { text-align: left; }
+.small-table td { padding: 6px 10px; text-align: right; font-family: var(--font-data); border-bottom: 1px solid var(--border); }
+.small-table td:first-child { text-align: left; color: var(--text2); font-family: inherit; }
+.small-table tr:last-child td { border-bottom: none; }
+.small-table tr.highlight td { background: var(--bg3); color: var(--celeste); font-weight: 700; }
+.small-table tr:hover td { background: var(--bg3); }
+
+.scenario-table td.pos { color: var(--verde); }
+.scenario-table td.neg { color: var(--rojo); }
+.scenario-table tr.base td { color: var(--oro); font-weight: 700; }
+
+/* ── CARTERA ─────────────────────────────────────────────── */
+.cartera-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media(max-width:900px){ .cartera-layout { grid-template-columns: 1fr; } }
+
+.cartera-row-inputs {
+  display: grid;
+  grid-template-columns: 160px 80px 1fr 70px 70px 70px 28px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.mini-input {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  width: 100%;
+  outline: none;
+}
+.mini-input:focus { border-color: var(--celeste); }
+.mini-input.readonly { color: var(--text2); cursor: default; background: var(--bg); }
+.btn-del {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--rojo);
+  cursor: pointer;
+  padding: 5px;
+  font-size: 13px;
+  line-height: 1;
+  transition: all .15s;
+}
+.btn-del:hover { background: var(--rojo2); }
+.btn-add {
+  background: none;
+  border: 1px dashed var(--border2);
+  border-radius: var(--r);
+  color: var(--text3);
+  cursor: pointer;
+  padding: 8px;
+  font-size: 11px;
+  width: 100%;
+  transition: all .15s;
+  margin-top: 6px;
+}
+.btn-add:hover { border-color: var(--celeste); color: var(--celeste); }
+.total-bar {
+  display: grid;
+  grid-template-columns: 160px 80px 1fr 70px 70px 70px 28px;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border2);
+  font-size: 11px;
+  font-family: var(--font-data);
+  font-weight: 700;
+}
+.alloc-ring-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+
+.metric-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+}
+.metric-item .ml { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+.metric-item .mv { font-family: var(--font-data); font-size: 18px; font-weight: 700; margin-top: 2px; }
+
+/* ── MEP ─────────────────────────────────────────────────── */
+.mep-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media(max-width:800px){ .mep-layout { grid-template-columns: 1fr; } }
+.result-big {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-top: 14px;
+  text-align: center;
+}
+.result-big .rl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+.result-big .rv { font-family: var(--font-data); font-size: 36px; font-weight: 800; margin: 6px 0; }
+.result-big .rs { font-size: 11px; color: var(--text2); }
+
+/* ── ALERTS / BADGE ──────────────────────────────────────── */
+.badge-ok  { background: var(--verde2); color: var(--verde); padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.badge-bad { background: var(--rojo2);  color: var(--rojo);  padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+
+.error-msg {
+  background: var(--rojo2);
+  color: var(--rojo);
+  border: 1px solid #5a2020;
+  border-radius: var(--r);
+  padding: 8px 12px;
+  font-size: 11px;
+  margin-top: 8px;
+  display: none;
+}
+.loading-msg {
+  color: var(--text3);
+  font-size: 11px;
+  margin-top: 8px;
+  display: none;
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ──────────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="flag">🇦🇷</span>
+    MONITOR DE BONOS
+    <span>Argentina</span>
+  </div>
+  <div class="topbar-meta">
+    <span><span class="live-dot"></span>Precios: <strong id="precio-status">cargando…</strong></span>
+    <span>TC Oficial: <strong id="tc-oficial">$1.090</strong></span>
+    <span>MEP: <strong id="tc-mep">$1.115</strong></span>
+    <span>CER: <strong id="cer-val">x1,00</strong></span>
+    <span style="color:var(--text3)" id="last-update">—</span>
+  </div>
+</div>
+
+<!-- ── NAV ────────────────────────────────────────────────── -->
+<div class="nav">
+  <div class="nav-tab active" onclick="showPage('dashboard')">📊 Dashboard</div>
+  <div class="nav-tab" onclick="showPage('bonos')">📋 Bonos</div>
+  <div class="nav-tab" onclick="showPage('simulador')">🔬 Simulador</div>
+  <div class="nav-tab" onclick="showPage('cartera')">📦 Cartera</div>
+  <div class="nav-tab" onclick="showPage('mep')">💱 MEP & Breakeven</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: DASHBOARD
+═══════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-dashboard">
+
+  <!-- Macro strip -->
+  <div class="macro-strip">
+    <div class="macro-card">
+      <div class="label">TC Oficial</div>
+      <div class="value c-cel" id="d-tc-of">$1.090</div>
+      <div class="sub">ARS / USD · BCRA</div>
+    </div>
+    <div class="macro-card">
+      <div class="label">MEP (CCL)</div>
+      <div class="value c-ver" id="d-tc-mep">$1.115</div>
+      <div class="sub">Tipo de cambio financiero</div>
+    </div>
+    <div class="macro-card">
+      <div class="label">Brecha MEP</div>
+      <div class="value c-oro" id="d-brecha">2,3%</div>
+      <div class="sub">vs Oficial</div>
+    </div>
+    <div class="macro-card">
+      <div class="label">Inflación Mensual</div>
+      <div class="value c-roj" id="d-inf">3,7%</div>
+      <div class="sub">Último dato INDEC</div>
+    </div>
+    <div class="macro-card">
+      <div class="label">BADLAR</div>
+      <div class="value c-vio" id="d-badlar">37,0%</div>
+      <div class="sub">Tasa bancos privados TNA</div>
+    </div>
+    <div class="macro-card">
+      <div class="label">Bonos en tabla</div>
+      <div class="value c-cel" id="d-nbonos">30</div>
+      <div class="sub">Instrumentos cargados</div>
+    </div>
+  </div>
+
+  <!-- Segment cards -->
+  <div class="section-title">Resumen por segmento</div>
+  <div class="segment-grid" id="seg-grid"></div>
+
+  <!-- Yield curve -->
+  <div class="chart-wrap">
+    <div class="chart-header">
+      <div class="chart-title">Curvas de Rendimiento (Duration vs TIR)</div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--celeste)"></div>HD Ley NY</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--verde)"></div>HD Ley Arg</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--oro)"></div>BOPREAL</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--violeta)"></div>Tasa Fija</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--rosa)"></div>CER</div>
+      </div>
+    </div>
+    <canvas id="yc-chart" height="240"></canvas>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: BONOS
+═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-bonos">
+
+  <div class="table-controls">
+    <input class="search-box" id="bond-search" placeholder="Buscar ticker o nombre…" oninput="filterBonds()">
+    <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+    <button class="filter-btn" onclick="setFilter('HD NY',this)">HD Ley NY</button>
+    <button class="filter-btn" onclick="setFilter('HD Arg',this)">HD Ley Arg</button>
+    <button class="filter-btn" onclick="setFilter('TF',this)">Tasa Fija</button>
+    <button class="filter-btn" onclick="setFilter('CER',this)">CER</button>
+    <button class="filter-btn" onclick="setFilter('Dual',this)">Duales</button>
+    <button class="filter-btn" onclick="setFilter('BOPREAL',this)">BOPREAL</button>
+    <button class="filter-btn" onclick="setFilter('DL',this)">Dollar-Linked</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="bond-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable('ticker')">Ticker ↕</th>
+          <th onclick="sortTable('nombre')">Nombre ↕</th>
+          <th>Segmento</th>
+          <th onclick="sortTable('precio')" style="text-align:right">Precio ↕</th>
+          <th onclick="sortTable('tir')" style="text-align:right">TIR % ↕</th>
+          <th onclick="sortTable('duration')" style="text-align:right">Dur (Mac) ↕</th>
+          <th style="text-align:right">Dur Mod</th>
+          <th style="text-align:right">Paridad %</th>
+          <th style="text-align:right">V.Residual</th>
+          <th style="text-align:right">Vol $mm</th>
+          <th>TIR (visual)</th>
+          <th>Vcto</th>
+        </tr>
+      </thead>
+      <tbody id="bond-tbody"></tbody>
+    </table>
+  </div>
+  <div style="color:var(--text3);font-size:10px;margin-top:8px">
+    Click en una fila para abrir el Simulador con ese bono · Datos al 09/04/2025 (base Excel)
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: SIMULADOR
+═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-simulador">
+  <div class="sim-layout">
+
+    <!-- Panel izquierdo: inputs -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">📌 Selector de bono</div>
+        <div class="field">
+          <label>Ticker</label>
+          <input id="sim-ticker" type="text" placeholder="AL29, GD30…" oninput="simLookupTicker()" style="text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label>Nombre del bono</label>
+          <input id="sim-nombre" type="text" class="readonly" readonly>
+        </div>
+        <div class="field">
+          <label>Precio entrada p/simular (MD)</label>
+          <input id="sim-precio" type="number" placeholder="62.15" oninput="simRecalc()">
+        </div>
+        <div class="field">
+          <label>Precio mercado (referencia)</label>
+          <input id="sim-precio-ref" type="text" class="readonly" readonly>
+        </div>
+        <div class="error-msg" id="sim-error">Ticker no encontrado. Usá: AL29, GD30, TX26…</div>
+        <div class="loading-msg" id="sim-loading">⟳ Calculando XIRR…</div>
+
+        <div class="result-grid" id="sim-results" style="display:none">
+          <div class="result-card result-wide">
+            <div class="rl">TIR exacta (XIRR)</div>
+            <div class="rv c-ver" id="sim-tir">—</div>
+            <div class="rs">Calculada sobre flujos reales del bono</div>
+          </div>
+          <div class="result-card">
+            <div class="rl">Duration (Mac)</div>
+            <div class="rv c-cel" id="sim-dur">—</div>
+            <div class="rs">años</div>
+          </div>
+          <div class="result-card">
+            <div class="rl">Duration Mod</div>
+            <div class="rv" id="sim-durmod">—</div>
+            <div class="rs">sensibilidad a tasas</div>
+          </div>
+          <div class="result-card">
+            <div class="rl">DV01 (por $1mm)</div>
+            <div class="rv c-oro" id="sim-dv01">—</div>
+            <div class="rs">cambio precio ante +1bp</div>
+          </div>
+          <div class="result-card">
+            <div class="rl">Paridad</div>
+            <div class="rv" id="sim-paridad">—</div>
+            <div class="rs">precio / val. residual</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config tablas -->
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-title">⚙️ Parámetros de las tablas</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="field"><label>Precio mín</label><input class="mini-input" id="tp-pmin" value="30" oninput="buildSimTables()"></div>
+          <div class="field"><label>Precio máx</label><input class="mini-input" id="tp-pmax" value="80" oninput="buildSimTables()"></div>
+          <div class="field"><label>Paso</label><input class="mini-input" id="tp-paso" value="2.5" oninput="buildSimTables()"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
+          <div class="field"><label>TIR mín %</label><input class="mini-input" id="tt-tmin" value="8" oninput="buildSimTables()"></div>
+          <div class="field"><label>TIR máx %</label><input class="mini-input" id="tt-tmax" value="28" oninput="buildSimTables()"></div>
+          <div class="field"><label>Paso %</label><input class="mini-input" id="tt-paso" value="1" oninput="buildSimTables()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel derecho: tablas y escenarios -->
+    <div>
+      <div class="panel">
+        <div class="sim-table-tabs">
+          <div class="sim-tab active" onclick="showSimTab('precio-tir',this)">Precio → TIR</div>
+          <div class="sim-tab" onclick="showSimTab('tir-precio',this)">TIR → Precio</div>
+          <div class="sim-tab" onclick="showSimTab('escenarios',this)">Escenarios Δ TIR</div>
+        </div>
+
+        <div class="sim-subtable active" id="st-precio-tir">
+          <div class="table-wrap" style="max-height:460px;overflow-y:auto">
+            <table class="small-table" id="sim-t1">
+              <thead><tr><th>Precio (MD)</th><th>TIR %</th><th>Dur Mod</th></tr></thead>
+              <tbody id="sim-t1-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="sim-subtable" id="st-tir-precio">
+          <div class="table-wrap" style="max-height:460px;overflow-y:auto">
+            <table class="small-table" id="sim-t2">
+              <thead><tr><th>TIR %</th><th>Precio MD</th><th>Paridad %</th></tr></thead>
+              <tbody id="sim-t2-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="sim-subtable" id="st-escenarios">
+          <div class="table-wrap" style="max-height:460px;overflow-y:auto">
+            <table class="small-table scenario-table" id="sim-t3">
+              <thead><tr><th>Escenario</th><th>Δ TIR (bps)</th><th>TIR resultante</th><th>Precio result.</th><th>Δ Precio %</th></tr></thead>
+              <tbody id="sim-t3-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: CARTERA
+═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-cartera">
+  <div class="cartera-layout">
+    <div>
+      <div class="panel">
+        <div class="panel-title">📦 Constructor de cartera</div>
+
+        <div class="field" style="max-width:260px">
+          <label>Monto total a invertir (USD o ARS)</label>
+          <input id="cart-monto" type="number" value="10000000" oninput="recalcCartera()">
+        </div>
+
+        <div class="cartera-row-inputs" style="font-size:9px;color:var(--text3);font-weight:600;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px">
+          <div>Nombre / Bono</div><div>Ticker</div><div>% Asig.</div><div>TIR %</div><div>Duration</div><div>Monto $</div><div></div>
+        </div>
+
+        <div id="cartera-rows"></div>
+        <button class="btn-add" onclick="addCarteraRow()">+ Agregar posición</button>
+
+        <div class="total-bar" id="cart-total-bar">
+          <div style="color:var(--text2)">TOTAL PONDERADO</div>
+          <div></div>
+          <div id="ct-pct" style="color:var(--oro)">0%</div>
+          <div id="ct-tir" style="color:var(--verde)">—</div>
+          <div id="ct-dur" style="color:var(--celeste)">—</div>
+          <div id="ct-monto" style="color:var(--text2)">—</div>
+          <div></div>
+        </div>
+        <div id="ct-check" style="font-size:10px;margin-top:6px"></div>
+      </div>
+    </div>
+
+    <!-- Panel derecho: métricas + donut -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">📊 Métricas de cartera</div>
+        <div class="alloc-ring-wrap">
+          <canvas id="donut-chart" width="200" height="200"></canvas>
+        </div>
+        <div class="metric-list">
+          <div class="metric-item">
+            <div class="ml">TIR ponderada</div>
+            <div class="mv c-ver" id="cm-tir">—</div>
+          </div>
+          <div class="metric-item">
+            <div class="ml">Duration pond.</div>
+            <div class="mv c-cel" id="cm-dur">—</div>
+          </div>
+          <div class="metric-item">
+            <div class="ml">DV01 total</div>
+            <div class="mv c-oro" id="cm-dv01">—</div>
+          </div>
+          <div class="metric-item">
+            <div class="ml">Val. Nominal</div>
+            <div class="mv" id="cm-vn">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: MEP & BREAKEVEN
+═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-mep">
+  <div class="mep-layout">
+
+    <!-- Calculadora MEP -->
+    <div class="panel">
+      <div class="panel-title">💵 Calculadora MEP / CCL implícito</div>
+      <div class="field">
+        <label>Ticker versión ARS (ej: AL30D, GD30D)</label>
+        <input id="mep-ticker-ars" type="text" placeholder="AL30D" value="AL30 ARS">
+      </div>
+      <div class="field">
+        <label>Precio en pesos (ARS)</label>
+        <input id="mep-precio-ars" type="number" value="5621.5" oninput="calcMEP()">
+      </div>
+      <div class="field">
+        <label>Ticker versión USD (ej: AL30)</label>
+        <input id="mep-ticker-usd" type="text" placeholder="AL30" value="AL30">
+      </div>
+      <div class="field">
+        <label>Precio en USD</label>
+        <input id="mep-precio-usd" type="number" value="56.8" oninput="calcMEP()">
+      </div>
+      <div class="field">
+        <label>Ratio de conversión (generalmente 1)</label>
+        <input id="mep-ratio" type="number" value="1" step="0.01" oninput="calcMEP()">
+      </div>
+      <div class="result-big">
+        <div class="rl">MEP Implícito</div>
+        <div class="rv c-cel" id="mep-result">$98,97</div>
+        <div class="rs" id="mep-brecha">Brecha vs oficial: <span id="mep-brecha-val">—</span></div>
+      </div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="result-card">
+          <div class="rl">CCL estimado (+5%)</div>
+          <div class="rv c-oro" id="mep-ccl">—</div>
+        </div>
+        <div class="result-card">
+          <div class="rl">TC Oficial ref.</div>
+          <div class="rv" id="mep-tcof">$1.090</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Breakeven CER vs TF -->
+    <div class="panel">
+      <div class="panel-title">📈 Breakeven CER vs Tasa Fija</div>
+      <div class="field">
+        <label>TIR Lecap / Boncap (TNA %)</label>
+        <input id="be-tir-tf" type="number" value="52" oninput="calcBreakeven()">
+      </div>
+      <div class="field">
+        <label>TIR bono CER (tasa real %)</label>
+        <input id="be-tir-cer" type="number" value="5.2" oninput="calcBreakeven()">
+      </div>
+      <div class="field">
+        <label>Meses al vencimiento</label>
+        <input id="be-meses" type="number" value="12" oninput="calcBreakeven()">
+      </div>
+      <div class="result-big">
+        <div class="rl">Inflación mensual breakeven</div>
+        <div class="rv c-oro" id="be-inf-m">—</div>
+        <div class="rs">Inflación anual equiv: <span id="be-inf-a">—</span></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text2);margin-bottom:10px" id="be-interp">—</div>
+
+      <div class="section-title" style="margin-top:0">Tabla: ¿CER o Tasa Fija?</div>
+      <div class="table-wrap">
+        <table class="small-table" id="be-table">
+          <thead><tr><th>Inflación mensual %</th><th>TNA TF %</th><th>Conviene →</th></tr></thead>
+          <tbody id="be-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   DATOS BASE (del Excel, v5)
+══════════════════════════════════════════════════════════ */
+const CONFIG = {
+  tcOficial: 1090,
+  tcMep: 1115,
+  cer: 1.00,
+  inflacion: 3.7,
+  badlar: 37,
+  fecha: '09/04/2025'
+};
+
+// Flujos de cada bono para XIRR
+// format: [date_str_YYYY-MM-DD, flujo_sobre_100]
+// Inversión inicial se agrega dinámicamente con el precio
+const BOND_FLOWS = {
+  AL29: { dates:['2025-01-31','2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31'], flows:[0.0625,0.0625,0.25,0.25,4.375,8.875+4,1.75+4*0.96,1.75+12*0.88,2.125*0.72+10*0.72,2.125*0.62+62*0.62] },
+  AL30: { dates:['2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31'], flows:[0.0625,0.0625,0.25,0.25,0.875+4*1,0.875+8*0.96,1.75+4*0.88,1.75+12*0.84,2.125*0.72+10*0.72,2.125*0.62+10*0.62,2.125*0.52+52*0.52] },
+  AL35: { dates:['2025-01-31','2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125+4,2.125*0.96+8*0.96,2.125*0.88+4*0.88,2.125*0.84+12*0.84,2.125*0.72+10*0.72,2.125*0.62+10*0.62,2.125*0.52+10*0.52,2.125*0.42+10*0.42,2.125*0.32+10*0.32,2.125*0.22+10*0.22,2.125*0.12+10*0.12,2.125*0.0+12*0.0+2.125] },
+  AL38: { dates:['2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31','2035-07-31','2036-01-31','2036-07-31','2037-01-31','2037-07-31','2038-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,102.125] },
+  AL41: { dates:['2025-01-31','2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31','2035-07-31','2036-01-31','2036-07-31','2037-01-31','2037-07-31','2038-01-31','2038-07-31','2039-01-31','2039-07-31','2040-01-31','2040-07-31','2041-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,102.125] },
+  AL46: { dates:['2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31','2035-07-31','2036-01-31','2036-07-31','2037-01-31','2037-07-31','2038-01-31','2038-07-31','2039-01-31','2039-07-31','2040-01-31','2040-07-31','2041-01-31','2041-07-31','2042-01-31','2042-07-31','2043-01-31','2043-07-31','2044-01-31','2044-07-31','2045-01-31','2045-07-31','2046-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,102.125] },
+  GD29: { dates:['2025-01-31','2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31'], flows:[0.0625,0.0625,0.25,0.25,4.375,8.875+4,1.75+4*0.96,1.75+12*0.88,2.125*0.72+10*0.72,2.125*0.62+62*0.62] },
+  GD30: { dates:['2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31'], flows:[0.0625,0.0625,0.25,0.25,0.875+4,0.875+8*0.96,1.75+4*0.88,1.75+12*0.84,2.125*0.72+10*0.72,2.125*0.62+10*0.62,2.125*0.52+52*0.52] },
+  GD35: { dates:['2025-01-31','2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125+4,2.125*0.96+8*0.96,2.125*0.88+4*0.88,2.125*0.84+12*0.84,2.125*0.72+10*0.72,2.125*0.62+10*0.62,2.125*0.52+10*0.52,2.125*0.42+10*0.42,2.125*0.32+10*0.32,2.125*0.22+10*0.22,2.125*0.12+10*0.12,2.125+12] },
+  GD38: { dates:['2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31','2035-07-31','2036-01-31','2036-07-31','2037-01-31','2037-07-31','2038-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,102.125] },
+  GD41: { dates:['2025-01-31','2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31','2035-07-31','2036-01-31','2036-07-31','2037-01-31','2037-07-31','2038-01-31','2038-07-31','2039-01-31','2039-07-31','2040-01-31','2040-07-31','2041-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,102.125] },
+  GD46: { dates:['2025-07-31','2026-01-31','2026-07-31','2027-01-31','2027-07-31','2028-01-31','2028-07-31','2029-01-31','2029-07-31','2030-01-31','2030-07-31','2031-01-31','2031-07-31','2032-01-31','2032-07-31','2033-01-31','2033-07-31','2034-01-31','2034-07-31','2035-01-31','2035-07-31','2036-01-31','2036-07-31','2037-01-31','2037-07-31','2038-01-31','2038-07-31','2039-01-31','2039-07-31','2040-01-31','2040-07-31','2041-01-31','2041-07-31','2042-01-31','2042-07-31','2043-01-31','2043-07-31','2044-01-31','2044-07-31','2045-01-31','2045-07-31','2046-01-31'], flows:[0.0625,0.0625,0.25,0.25,0.875,0.875,1.75,1.75,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,2.125,102.125] },
+  // Simplificados para ARS (TIR nominal directa, sin XIRR de flujos complejos)
+  S31M5:{ dates:['2025-03-31'], flows:[100] },
+  S30J5:{ dates:['2025-06-30'], flows:[100] },
+  S30S5:{ dates:['2025-09-30'], flows:[100] },
+  T30E6:{ dates:['2026-01-30'], flows:[100] },
+  T31M6:{ dates:['2026-03-31'], flows:[100] },
+  TX25: { dates:['2025-10-15'], flows:[100] },
+  TX26: { dates:['2026-02-23'], flows:[102.5] },
+  TX27: { dates:['2025-11-20','2026-11-20'], flows:[5,105] },
+  DICP: { dates:['2025-12-31','2026-12-31','2027-12-31','2028-12-31','2029-12-31','2030-12-31','2031-12-31','2032-12-31','2033-12-31'], flows:[10.83,10.33,9.83,14.58,13.42,12.27,11.11,14.97,10.73] },
+  PARP: { dates:['2025-12-31','2026-12-31','2027-12-31','2028-12-31','2029-12-31','2030-12-31','2031-12-31','2032-12-31','2033-12-31','2034-12-31','2035-12-31','2036-12-31','2037-12-31','2038-12-31'], flows:[2,2,2,3,3,5,5,8,8,10,10,12,12,18] },
+  TDJ25:{ dates:['2025-06-30'], flows:[100] },
+  TDL25:{ dates:['2025-07-31'], flows:[100] },
+  BPJ27:{ dates:['2025-04-30','2025-07-31','2025-10-31','2026-01-31','2026-04-30','2026-07-31','2026-10-31','2027-01-31'], flows:[5.75,5.75,5.75,5.75,10.75,10.75,10.75,50.75] },
+  BPO28:{ dates:['2025-05-01','2025-11-01','2026-05-01','2026-11-01','2027-05-01','2027-11-01','2028-05-01','2028-10-31'], flows:[1.5,1.5,1.5,1.5,1.5,1.5,1.5,101.5] },
+  BPY26:{ dates:['2026-06-30'], flows:[100] },
+  BPD26:{ dates:['2025-05-01','2025-11-01','2026-05-31'], flows:[1.5,1.5,101.5] },
+  T2V5: { dates:['2025-04-30'], flows:[100] },
+  T2V6: { dates:['2026-04-30'], flows:[100] },
+};
+
+const BONDS = [
+  // ticker, nombre, segmento, moneda-tag, precio, TIR, dur, durmod, residual, paridad, vol, vcto, notas
+  {t:'AL29',n:'Bono Arg 2029 (Step-Up)',  s:'HD NY',   tag:'tag-ny',  p:62.15, tir:18.2,  dur:3.12, dm:3.02, res:62.5, par:117.7, vol:180, vcto:'2029-07-31', m:'Fijo step-up'},
+  {t:'AL30',n:'Bono Arg 2030 (Step-Up)',  s:'HD NY',   tag:'tag-ny',  p:56.8,  tir:17.1,  dur:3.85, dm:3.68, res:55,   par:117.8, vol:310, vcto:'2030-07-31', m:'El más líquido'},
+  {t:'AL35',n:'Bono Arg 2035 (Step-Up)',  s:'HD NY',   tag:'tag-ny',  p:46.5,  tir:16.4,  dur:5.9,  dm:5.55, res:44,   par:122.0, vol:85,  vcto:'2035-01-31', m:'Mayor duration'},
+  {t:'AL38',n:'Bono Arg 2038 (Step-Up)',  s:'HD NY',   tag:'tag-ny',  p:38.2,  tir:15.9,  dur:7.2,  dm:6.75, res:36,   par:132.0, vol:50,  vcto:'2038-01-31', m:'Alta convexidad'},
+  {t:'AL41',n:'Bono Arg 2041 (Step-Up)',  s:'HD NY',   tag:'tag-ny',  p:30.1,  tir:15.5,  dur:8.9,  dm:8.25, res:28,   par:133.8, vol:30,  vcto:'2041-01-31', m:'Bono largo'},
+  {t:'AL46',n:'Bono Arg 2046 (Step-Up)',  s:'HD NY',   tag:'tag-ny',  p:25.8,  tir:15.2,  dur:10.4, dm:9.6,  res:22,   par:141.8, vol:20,  vcto:'2046-01-31', m:'Ultra-largo'},
+  {t:'GD29',n:'Global Arg 2029',          s:'HD Arg',  tag:'tag-arg', p:63.4,  tir:17.8,  dur:3.1,  dm:2.98, res:62.5, par:119.4, vol:95,  vcto:'2029-07-31', m:'Prima ley Arg'},
+  {t:'GD30',n:'Global Arg 2030',          s:'HD Arg',  tag:'tag-arg', p:58.2,  tir:16.7,  dur:3.83, dm:3.65, res:55,   par:120.0, vol:260, vcto:'2030-07-31', m:'Referente de curva'},
+  {t:'GD35',n:'Global Arg 2035',          s:'HD Arg',  tag:'tag-arg', p:48.1,  tir:15.9,  dur:5.88, dm:5.52, res:44,   par:124.6, vol:120, vcto:'2035-01-31', m:''},
+  {t:'GD38',n:'Global Arg 2038',          s:'HD Arg',  tag:'tag-arg', p:39.8,  tir:15.4,  dur:7.18, dm:6.72, res:36,   par:135.7, vol:70,  vcto:'2038-01-31', m:''},
+  {t:'GD41',n:'Global Arg 2041',          s:'HD Arg',  tag:'tag-arg', p:31.5,  tir:15.1,  dur:8.88, dm:8.22, res:28,   par:137.6, vol:40,  vcto:'2041-01-31', m:''},
+  {t:'GD46',n:'Global Arg 2046',          s:'HD Arg',  tag:'tag-arg', p:27.2,  tir:14.8,  dur:10.38,dm:9.55, res:22,   par:146.2, vol:28,  vcto:'2046-01-31', m:''},
+  {t:'S31M5',n:'Lecap Mar-2025',          s:'TF',      tag:'tag-tf',  p:980.5, tir:55,    dur:0.05, dm:0.04, res:100,  par:98.05, vol:2800,vcto:'2025-03-31', m:'Zero coupon'},
+  {t:'S30J5',n:'Lecap Jun-2025',          s:'TF',      tag:'tag-tf',  p:908.2, tir:52,    dur:0.22, dm:0.21, res:100,  par:90.82, vol:1950,vcto:'2025-06-30', m:''},
+  {t:'S30S5',n:'Lecap Sep-2025',          s:'TF',      tag:'tag-tf',  p:820.1, tir:48,    dur:0.47, dm:0.45, res:100,  par:82.01, vol:1200,vcto:'2025-09-30', m:''},
+  {t:'T30E6',n:'Boncap Ene-2026',         s:'TF',      tag:'tag-tf',  p:730.5, tir:45,    dur:0.8,  dm:0.77, res:100,  par:73.05, vol:850, vcto:'2026-01-30', m:''},
+  {t:'T31M6',n:'Boncap Mar-2026',         s:'TF',      tag:'tag-tf',  p:688.3, tir:44,    dur:0.97, dm:0.93, res:100,  par:68.83, vol:620, vcto:'2026-03-31', m:''},
+  {t:'TX25',n:'Boncer Oct-2025',          s:'CER',     tag:'tag-cer', p:1480.2,tir:6.5,   dur:0.52, dm:0.49, res:100,  par:148.0, vol:950, vcto:'2025-10-15', m:'Ajusta CER'},
+  {t:'TX26',n:'Boncer Feb-2026',          s:'CER',     tag:'tag-cer', p:1610.4,tir:5.2,   dur:0.87, dm:0.83, res:100,  par:161.0, vol:750, vcto:'2026-02-23', m:''},
+  {t:'TX27',n:'Boncer Nov-2026',          s:'CER',     tag:'tag-cer', p:1820,  tir:4.8,   dur:1.62, dm:1.54, res:100,  par:182.0, vol:480, vcto:'2026-11-20', m:''},
+  {t:'DICP',n:'Discount CER 2033',        s:'CER',     tag:'tag-cer', p:5820.1,tir:7.2,   dur:5.1,  dm:4.75, res:35,   par:582.0, vol:180, vcto:'2033-12-31', m:'Bono largo CER'},
+  {t:'PARP',n:'Par CER 2038',             s:'CER',     tag:'tag-cer', p:3240.5,tir:8.1,   dur:6.2,  dm:5.82, res:18,   par:324.1, vol:95,  vcto:'2038-12-31', m:'Residual bajo'},
+  {t:'TDJ25',n:'Bono Dual Jun-2025',      s:'Dual',    tag:'tag-dual',p:1092.3,tir:52,    dur:0.22, dm:0.21, res:100,  par:109.2, vol:420, vcto:'2025-06-30', m:'Max(CER,DL)'},
+  {t:'TDL25',n:'Bono Dual Jul-2025',      s:'Dual',    tag:'tag-dual',p:1048.1,tir:50,    dur:0.31, dm:0.29, res:100,  par:104.8, vol:310, vcto:'2025-07-31', m:''},
+  {t:'BPJ27',n:'BOPREAL 1A 2027',         s:'BOPREAL', tag:'tag-bop', p:92.4,  tir:10.2,  dur:1.82, dm:1.78, res:65,   par:108.5, vol:65,  vcto:'2027-01-31', m:'BCRA importadores'},
+  {t:'BPO28',n:'BOPREAL 1B 2028',         s:'BOPREAL', tag:'tag-bop', p:88.5,  tir:11.8,  dur:3.4,  dm:3.28, res:100,  par:88.5,  vol:45,  vcto:'2028-10-31', m:''},
+  {t:'BPY26',n:'BOPREAL Serie 2 2026',    s:'BOPREAL', tag:'tag-bop', p:82.1,  tir:14.5,  dur:1.22, dm:1.19, res:100,  par:82.1,  vol:30,  vcto:'2026-06-30', m:'Zero coupon'},
+  {t:'BPD26',n:'BOPREAL Serie 3 2026',    s:'BOPREAL', tag:'tag-bop', p:93.2,  tir:12.1,  dur:1.15, dm:1.12, res:100,  par:93.2,  vol:28,  vcto:'2026-05-31', m:''},
+  {t:'T2V5',n:'TV25 Dollar-Linked',       s:'DL',      tag:'tag-dl',  p:980,   tir:55,    dur:0.06, dm:0.06, res:100,  par:98.0,  vol:380, vcto:'2025-04-30', m:'Dólar oficial'},
+  {t:'T2V6',n:'TV26 Dollar-Linked',       s:'DL',      tag:'tag-dl',  p:920.5, tir:42,    dur:1.06, dm:1.01, res:100,  par:92.1,  vol:210, vcto:'2026-04-30', m:'Cobertura 12m'},
+];
+
+// Live prices (se actualizan si Yahoo responde)
+let livePrices = {};
+
+/* ══════════════════════════════════════════════════════════
+   XIRR IMPLEMENTATION
+══════════════════════════════════════════════════════════ */
+function xirr(cashflows, dates, guess = 0.1) {
+  const MAXITER = 200, TOL = 1e-8;
+  const t0 = dates[0];
+  const years = dates.map(d => (new Date(d) - new Date(t0)) / (365.25 * 86400000));
+
+  function npv(r) {
+    return cashflows.reduce((s,cf,i) => s + cf / Math.pow(1+r, years[i]), 0);
+  }
+  function dnpv(r) {
+    return cashflows.reduce((s,cf,i) => s - years[i]*cf / Math.pow(1+r, years[i]+1), 0);
+  }
+
+  let r = guess;
+  for (let i=0; i<MAXITER; i++) {
+    const f = npv(r), df = dnpv(r);
+    if (Math.abs(df) < 1e-15) break;
+    const rn = r - f/df;
+    if (Math.abs(rn - r) < TOL) return rn;
+    r = rn;
+    if (r < -0.9999) r = -0.9; // guardrail
+  }
+  return r;
+}
+
+function calcXIRR(ticker, price) {
+  const bf = BOND_FLOWS[ticker];
+  if (!bf) return null;
+  const today = new Date().toISOString().slice(0,10);
+  const allDates = [today, ...bf.dates];
+  const allFlows = [-price, ...bf.flows];
   try {
-    const reqs = [
-      { url: `${IOL_BASE}/api/v2/titulos/AL30/cotizacion?mercado=bCBA`,  headers: { 'Authorization': `Bearer ${token}` }, muteHttpExceptions: true },
-      { url: `${IOL_BASE}/api/v2/titulos/AL30D/cotizacion?mercado=bCBA`, headers: { 'Authorization': `Bearer ${token}` }, muteHttpExceptions: true },
-    ];
-    const [resARS, resUSD] = UrlFetchApp.fetchAll(reqs);
-    if (resARS.getResponseCode() === 200 && resUSD.getResponseCode() === 200) {
-      const pARS = JSON.parse(resARS.getContentText()).ultimoPrecio;
-      const pUSD = JSON.parse(resUSD.getContentText()).ultimoPrecio;
-      if (pARS && pUSD) return +(pARS / pUSD).toFixed(2);
+    const r = xirr(allFlows, allDates);
+    return isFinite(r) ? r : null;
+  } catch(e) { return null; }
+}
+
+// Precio implícito dado TIR (Newton-Raphson sobre flujos)
+function calcPriceFromTIR(ticker, tirDec) {
+  const bf = BOND_FLOWS[ticker];
+  if (!bf) return null;
+  const today = new Date();
+  const years = bf.dates.map(d => (new Date(d) - today) / (365.25*86400000));
+  const price = bf.flows.reduce((s,f,i) => s + f/Math.pow(1+tirDec, Math.max(years[i],0)), 0);
+  return price;
+}
+
+// Duration de Macaulay
+function calcDuration(ticker, price, tirDec) {
+  const bf = BOND_FLOWS[ticker];
+  if (!bf) return null;
+  const today = new Date();
+  const years = bf.dates.map(d => (new Date(d) - today) / (365.25*86400000));
+  let sumWY = 0, sumPV = 0;
+  bf.flows.forEach((f,i) => {
+    const t = Math.max(years[i], 0);
+    const pv = f / Math.pow(1+tirDec, t);
+    sumWY += pv * t;
+    sumPV += pv;
+  });
+  return sumPV > 0 ? sumWY / sumPV : null;
+}
+
+/* ══════════════════════════════════════════════════════════
+   IOL VÍA GOOGLE APPS SCRIPT PROXY
+   El proxy maneja autenticación y CORS desde Google.
+   Se auto-refresca cada 5 minutos.
+══════════════════════════════════════════════════════════ */
+
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwLtranFtKqjoSnCT_4gKlk50-rBTJEM0U73Cs0kDu8lb2Z0hRf0EFW0KXhv6xODEh2/exec';
+
+let livePrices = {};
+
+async function fetchLivePrices() {
+  try {
+    document.getElementById('precio-status').textContent = 'Conectando IOL…';
+    document.getElementById('precio-status').style.color = 'var(--text3)';
+
+    const res = await fetch(PROXY_URL, { signal: AbortSignal.timeout(35000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Error del proxy');
+
+    // Actualizar MEP desde IOL
+    if (data.mep && data.mep > 0) {
+      CONFIG.tcMep = data.mep;
+      const mepStr = '$' + data.mep.toLocaleString('es-AR', {maximumFractionDigits:0});
+      document.getElementById('tc-mep').textContent   = mepStr;
+      document.getElementById('d-tc-mep').textContent = mepStr;
+      const brecha = ((data.mep / CONFIG.tcOficial - 1) * 100).toFixed(1);
+      document.getElementById('d-brecha').textContent = brecha + '%';
     }
-  } catch(e) {}
-  return null;
-}
 
-function doGet(e) {
-  try {
-    const token = getToken();
-
-    // Traemos todo en paralelo: MEP + todos los tickers juntos
-    const allTickers = [...TICKERS_HD, ...TICKERS_ARS];
-    const [mep, cotizaciones] = [getMEP(token), getCotizaciones(allTickers, token)];
-
-    const precios = {};
-    const errores = [];
-
-    allTickers.forEach(ticker => {
-      const cot = cotizaciones[ticker];
-      if (cot) {
-        const esHD = TICKERS_HD.includes(ticker);
-        const precio = (esHD && mep) ? +(cot.precio / mep).toFixed(4) : cot.precio;
-        precios[ticker] = {
-          p:    precio,
-          pARS: cot.precio,
-          v:    cot.variacion,
-          max:  cot.maximo,
-          min:  cot.minimo,
-          vol:  cot.volumen,
-          f:    cot.fecha
-        };
-      } else {
-        errores.push(ticker);
+    // Cargar precios y actualizar BONDS
+    let actualizados = 0;
+    Object.entries(data.precios).forEach(([ticker, info]) => {
+      if (info.p && info.p > 0) {
+        livePrices[ticker] = info.p;
+        actualizados++;
       }
     });
 
-    const now = new Date();
-    const hora = Utilities.formatDate(now, 'America/Argentina/Buenos_Aires', 'HH:mm');
+    BONDS.forEach(b => { if (livePrices[b.t]) b.p = livePrices[b.t]; });
 
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        ok: true,
-        timestamp: now.toISOString(),
-        hora,
-        mep,
-        total: Object.keys(precios).length,
-        errores,
-        precios
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+    document.getElementById('precio-status').textContent = `IOL ✓ (${actualizados} bonos)`;
+    document.getElementById('precio-status').style.color = 'var(--verde)';
+    document.getElementById('last-update').textContent   = `Actualizado ${data.hora} (IOL)`;
+
+    // Auto-refresh cada 5 minutos
+    setTimeout(() => fetchLivePrices().then(() => {
+      buildDashboard();
+      buildBondTable();
+    }), 5 * 60 * 1000);
+
+    return true;
 
   } catch(e) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: e.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    console.warn('Proxy IOL error:', e.message);
+    document.getElementById('precio-status').textContent = 'IOL sin conexión — datos base';
+    document.getElementById('precio-status').style.color = 'var(--oro)';
+    setTimeout(() => fetchLivePrices(), 2 * 60 * 1000);
+    return false;
   }
 }
 
-function testProxy() {
-  const result = doGet({});
-  Logger.log(result.getContent().slice(0, 1000));
+/* ══════════════════════════════════════════════════════════
+   NAV
+══════════════════════════════════════════════════════════ */
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  event.target.classList.add('active');
+  if (name==='cartera') renderDonut();
+  if (name==='mep') { calcMEP(); calcBreakeven(); }
 }
+
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════════════════ */
+function buildDashboard() {
+  // Macro strip
+  const brecha = ((CONFIG.tcMep/CONFIG.tcOficial -1)*100).toFixed(1);
+  document.getElementById('d-tc-of').textContent  = `$${CONFIG.tcOficial.toLocaleString('es-AR')}`;
+  document.getElementById('d-tc-mep').textContent = `$${CONFIG.tcMep.toLocaleString('es-AR')}`;
+  document.getElementById('d-brecha').textContent = `${brecha}%`;
+  document.getElementById('d-inf').textContent    = `${CONFIG.inflacion}%`;
+  document.getElementById('d-badlar').textContent = `${CONFIG.badlar}%`;
+  document.getElementById('d-nbonos').textContent = BONDS.length;
+  document.getElementById('tc-oficial').textContent = `$${CONFIG.tcOficial.toLocaleString('es-AR')}`;
+  document.getElementById('tc-mep').textContent     = `$${CONFIG.tcMep.toLocaleString('es-AR')}`;
+
+  // Segment cards
+  const segs = [
+    { name:'Hard Dollar Ley NY',  filter:'HD NY',   badge:'badge-usd', color:'var(--celeste)' },
+    { name:'Hard Dollar Ley Arg', filter:'HD Arg',  badge:'badge-usd', color:'var(--verde)' },
+    { name:'Tasa Fija (ARS)',      filter:'TF',      badge:'badge-ars', color:'var(--oro)' },
+    { name:'Bonos CER',            filter:'CER',     badge:'badge-ars', color:'var(--violeta)' },
+    { name:'Bonos Duales',         filter:'Dual',    badge:'badge-ars', color:'var(--rosa)' },
+    { name:'BOPREAL',              filter:'BOPREAL', badge:'badge-bop', color:'var(--oro)' },
+    { name:'Dollar-Linked',        filter:'DL',      badge:'badge-ars', color:'var(--celeste)' },
+  ];
+
+  const grid = document.getElementById('seg-grid');
+  grid.innerHTML = '';
+  segs.forEach(sg => {
+    const bs = BONDS.filter(b => b.s === sg.filter);
+    if (!bs.length) return;
+    const tirs = bs.map(b=>b.tir).filter(x=>x>0);
+    const durs = bs.map(b=>b.dur);
+    const minTir = Math.min(...tirs).toFixed(1);
+    const maxTir = Math.max(...tirs).toFixed(1);
+    const durProm = (durs.reduce((a,b)=>a+b,0)/durs.length).toFixed(2);
+    const moneda = bs[0].s.includes('HD') ? 'USD' : bs[0].s==='BOPREAL' ? 'USD/BCRA' : 'ARS';
+
+    grid.innerHTML += `
+    <div class="seg-card" onclick="goBonos('${sg.filter}')">
+      <div class="seg-header">
+        <div class="seg-name">${sg.name}</div>
+        <span class="seg-badge ${sg.badge}">${moneda}</span>
+      </div>
+      <div class="seg-metrics">
+        <div class="seg-m"><div class="ml">Bonos</div><div class="mv" style="color:${sg.color}">${bs.length}</div></div>
+        <div class="seg-m"><div class="ml">TIR rango</div><div class="mv" style="color:${sg.color};font-size:12px">${minTir}–${maxTir}%</div></div>
+        <div class="seg-m"><div class="ml">Dur prom</div><div class="mv" style="color:${sg.color}">${durProm}a</div></div>
+      </div>
+    </div>`;
+  });
+
+  // Yield curve chart
+  buildYCChart();
+}
+
+function goBonos(filter) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab')[1].classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-bonos').classList.add('active');
+  setFilter(filter, document.querySelectorAll('.filter-btn')[['todos','HD NY','HD Arg','TF','CER','Dual','BOPREAL','DL'].indexOf(filter)]);
+}
+
+/* ══════════════════════════════════════════════════════════
+   YIELD CURVE CHART (canvas manual)
+══════════════════════════════════════════════════════════ */
+function buildYCChart() {
+  const canvas = document.getElementById('yc-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 800;
+  const H = 240;
+  canvas.width = W; canvas.height = H;
+
+  const pad = { l:46, r:20, t:16, b:36 };
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+
+  const curves = [
+    { label:'HD NY',  color:'#4ea8de', bonds: BONDS.filter(b=>b.s==='HD NY')  },
+    { label:'HD Arg', color:'#3dd68c', bonds: BONDS.filter(b=>b.s==='HD Arg') },
+    { label:'BOPREAL',color:'#e6b84a', bonds: BONDS.filter(b=>b.s==='BOPREAL')},
+    { label:'TF',     color:'#9b7fe8', bonds: BONDS.filter(b=>b.s==='TF')     },
+    { label:'CER',    color:'#e87fb5', bonds: BONDS.filter(b=>b.s==='CER')    },
+  ];
+
+  const allDur = curves.flatMap(c=>c.bonds.map(b=>b.dur));
+  const allTIR = curves.flatMap(c=>c.bonds.map(b=>b.tir));
+  const minX=0, maxX=Math.ceil(Math.max(...allDur)*1.1);
+  const minY=0, maxY=Math.ceil(Math.max(...allTIR)*1.1);
+
+  const xp = x => pad.l + (x-minX)/(maxX-minX)*cw;
+  const yp = y => pad.t + ch - (y-minY)/(maxY-minY)*ch;
+
+  // Background
+  ctx.fillStyle='#12161f'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='#252a3a'; ctx.lineWidth=1;
+  for (let y=0; y<=maxY; y+=5) {
+    ctx.beginPath(); ctx.moveTo(pad.l, yp(y)); ctx.lineTo(pad.l+cw, yp(y)); ctx.stroke();
+    ctx.fillStyle='#5a6080'; ctx.font='10px monospace';
+    ctx.fillText(y+'%', 2, yp(y)+4);
+  }
+  for (let x=0; x<=maxX; x+=2) {
+    ctx.beginPath(); ctx.moveTo(xp(x), pad.t); ctx.lineTo(xp(x), pad.t+ch); ctx.stroke();
+    ctx.fillStyle='#5a6080'; ctx.font='10px monospace';
+    ctx.fillText(x+'a', xp(x)-6, H-8);
+  }
+
+  // Curves
+  curves.forEach(cv => {
+    const pts = cv.bonds.map(b=>({x:b.dur,y:b.tir})).sort((a,b)=>a.x-b.x);
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    ctx.strokeStyle = cv.color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
+    pts.forEach((p,i) => {
+      i===0 ? ctx.moveTo(xp(p.x),yp(p.y)) : ctx.lineTo(xp(p.x),yp(p.y));
+    });
+    ctx.stroke();
+
+    // Dots + labels
+    pts.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(xp(p.x),yp(p.y),3.5,0,Math.PI*2);
+      ctx.fillStyle=cv.color; ctx.fill();
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   TABLA BONOS
+══════════════════════════════════════════════════════════ */
+let currentFilter = 'todos';
+let sortCol = 'tir', sortDir = -1;
+
+function buildBondTable() {
+  renderBondTable(getFilteredBonds());
+}
+
+function getFilteredBonds() {
+  const q = document.getElementById('bond-search')?.value?.toLowerCase() || '';
+  return BONDS.filter(b => {
+    const matchSeg = currentFilter === 'todos' || b.s === currentFilter;
+    const matchQ = !q || b.t.toLowerCase().includes(q) || b.n.toLowerCase().includes(q);
+    return matchSeg && matchQ;
+  }).sort((a,b) => {
+    const va = a[sortCol] ?? 0, vb = b[sortCol] ?? 0;
+    return typeof va==='string' ? va.localeCompare(vb)*sortDir : (va-vb)*sortDir;
+  });
+}
+
+function renderBondTable(bonds) {
+  const maxTIR = Math.max(...BONDS.map(b=>b.tir));
+  const tbody = document.getElementById('bond-tbody');
+  tbody.innerHTML = bonds.map(b => {
+    const barW = Math.round((b.tir/maxTIR)*100);
+    return `<tr onclick="openSim('${b.t}')">
+      <td><span class="td-ticker">${b.t}</span></td>
+      <td class="td-name">${b.n}</td>
+      <td><span class="tag ${b.tag}">${b.s}</span></td>
+      <td class="td-num">${b.p.toLocaleString('es-AR',{maximumFractionDigits:2})}</td>
+      <td class="td-num tir-val" style="color:var(--verde)">${b.tir.toFixed(1)}%</td>
+      <td class="td-num">${b.dur.toFixed(2)}</td>
+      <td class="td-num">${b.dm.toFixed(2)}</td>
+      <td class="td-num">${b.par.toFixed(1)}%</td>
+      <td class="td-num">${b.res}%</td>
+      <td class="td-num">${b.vol}</td>
+      <td style="min-width:80px">
+        <div class="bar-cell">
+          <div class="mini-bar-bg"><div class="mini-bar" style="width:${barW}%;background:var(--verde)"></div></div>
+        </div>
+      </td>
+      <td class="td-num" style="color:var(--text3);font-size:10px">${b.vcto.slice(0,7)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterBonds() { renderBondTable(getFilteredBonds()); }
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  filterBonds();
+}
+
+function sortTable(col) {
+  if (sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=-1; }
+  filterBonds();
+}
+
+/* ══════════════════════════════════════════════════════════
+   SIMULADOR
+══════════════════════════════════════════════════════════ */
+let simBond = null;
+
+function openSim(ticker) {
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab')[2].classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-simulador').classList.add('active');
+  document.getElementById('sim-ticker').value = ticker;
+  simLookupTicker();
+}
+
+function simLookupTicker() {
+  const t = document.getElementById('sim-ticker').value.toUpperCase().trim();
+  const bond = BONDS.find(b=>b.t===t);
+  const err = document.getElementById('sim-error');
+  const res = document.getElementById('sim-results');
+
+  if (!bond) {
+    document.getElementById('sim-nombre').value = '';
+    document.getElementById('sim-precio').value = '';
+    document.getElementById('sim-precio-ref').value = '';
+    err.style.display = bond===undefined && t ? 'block' : 'none';
+    res.style.display = 'none';
+    simBond = null;
+    return;
+  }
+  err.style.display = 'none';
+  simBond = bond;
+  document.getElementById('sim-nombre').value = bond.n;
+  document.getElementById('sim-precio').value = bond.p;
+  document.getElementById('sim-precio-ref').value = `${bond.p} (precio base ${CONFIG.fecha})`;
+  simRecalc();
+}
+
+function simRecalc() {
+  if (!simBond) return;
+  const price = parseFloat(document.getElementById('sim-precio').value);
+  if (!price || price<=0) return;
+
+  const tirDec = calcXIRR(simBond.t, price);
+  if (tirDec === null) return;
+
+  const dur = calcDuration(simBond.t, price, tirDec) ?? simBond.dur;
+  const durMod = dur / (1 + tirDec);
+  const dv01 = durMod * price / 100 * 0.0001 * 1000000;
+  const paridad = (price / simBond.res * 100).toFixed(1);
+
+  document.getElementById('sim-tir').textContent    = (tirDec*100).toFixed(2) + '%';
+  document.getElementById('sim-dur').textContent    = dur.toFixed(2);
+  document.getElementById('sim-durmod').textContent = durMod.toFixed(2);
+  document.getElementById('sim-dv01').textContent   = '$' + dv01.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  document.getElementById('sim-paridad').textContent= paridad + '%';
+  document.getElementById('sim-results').style.display = 'grid';
+
+  buildSimTables();
+}
+
+function buildSimTables() {
+  if (!simBond) return;
+  const price = parseFloat(document.getElementById('sim-precio').value) || simBond.p;
+  const tirDec = calcXIRR(simBond.t, price) ?? simBond.tir/100;
+
+  // Tabla 1: Precio → TIR
+  const pMin = parseFloat(document.getElementById('tp-pmin').value)||30;
+  const pMax = parseFloat(document.getElementById('tp-pmax').value)||80;
+  const pPaso= parseFloat(document.getElementById('tp-paso').value)||2.5;
+  const t1 = document.getElementById('sim-t1-body');
+  let rows1 = '';
+  for (let p=pMin; p<=pMax+0.001; p+=pPaso) {
+    const tir = calcXIRR(simBond.t, p);
+    if (tir===null) continue;
+    const dm = (calcDuration(simBond.t, p, tir) ?? 0) / (1+tir);
+    const isRef = Math.abs(p - price) < pPaso/2;
+    rows1 += `<tr class="${isRef?'highlight':''}">
+      <td>${p.toFixed(2)}</td>
+      <td>${(tir*100).toFixed(2)}%</td>
+      <td>${dm.toFixed(2)}</td>
+    </tr>`;
+  }
+  t1.innerHTML = rows1;
+
+  // Tabla 2: TIR → Precio
+  const tMin = parseFloat(document.getElementById('tt-tmin').value)||8;
+  const tMax = parseFloat(document.getElementById('tt-tmax').value)||28;
+  const tPaso= parseFloat(document.getElementById('tt-paso').value)||1;
+  const t2 = document.getElementById('sim-t2-body');
+  let rows2 = '';
+  for (let tir=tMin; tir<=tMax+0.001; tir+=tPaso) {
+    const p = calcPriceFromTIR(simBond.t, tir/100);
+    if (p===null) continue;
+    const par = (p/simBond.res*100).toFixed(1);
+    const isRef = Math.abs(tir - tirDec*100) < tPaso;
+    rows2 += `<tr class="${isRef?'highlight':''}">
+      <td>${tir.toFixed(1)}%</td>
+      <td>${p.toFixed(2)}</td>
+      <td>${par}%</td>
+    </tr>`;
+  }
+  t2.innerHTML = rows2;
+
+  // Tabla 3: Escenarios
+  const scenarios = [
+    {n:'Rally fuerte',  dbps:-300},
+    {n:'Rally moderado',dbps:-200},
+    {n:'Rally leve',    dbps:-100},
+    {n:'Rally mínimo',  dbps:-50 },
+    {n:'BASE',          dbps:0   },
+    {n:'Suba mínima',   dbps:50  },
+    {n:'Suba leve',     dbps:100 },
+    {n:'Suba moderada', dbps:200 },
+    {n:'Suba fuerte',   dbps:300 },
+  ];
+  const t3 = document.getElementById('sim-t3-body');
+  t3.innerHTML = scenarios.map(sc => {
+    const newTIR = tirDec + sc.dbps/10000;
+    const newP = calcPriceFromTIR(simBond.t, newTIR) ?? 0;
+    const deltaP = ((newP-price)/price*100);
+    const isBase = sc.dbps===0;
+    return `<tr class="${isBase?'base':''}">
+      <td>${sc.n}</td>
+      <td class="${sc.dbps<0?'pos':sc.dbps>0?'neg':''}">${sc.dbps===0?'—':(sc.dbps>0?'+':'')+sc.dbps}</td>
+      <td>${(newTIR*100).toFixed(2)}%</td>
+      <td>${newP.toFixed(2)}</td>
+      <td class="${deltaP>0?'pos':'neg'}">${deltaP>0?'+':''}${deltaP.toFixed(2)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function showSimTab(id, el) {
+  document.querySelectorAll('.sim-subtable').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sim-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('st-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════════════
+   CARTERA
+══════════════════════════════════════════════════════════ */
+let carteraRows = [
+  {nombre:'AL30 – Hard$ Ley NY 2030', ticker:'AL30', pct:20},
+  {nombre:'GD30 – Hard$ Ley Arg 2030',ticker:'GD30', pct:15},
+  {nombre:'TX26 – CER Feb-2026',      ticker:'TX26', pct:15},
+  {nombre:'S30J5 – Lecap Jun-2025',   ticker:'S30J5',pct:15},
+  {nombre:'BPJ27 – BOPREAL 1A',       ticker:'BPJ27',pct:10},
+  {nombre:'T2V6 – Dollar-Linked',     ticker:'T2V6', pct:10},
+  {nombre:'AL35 – Hard$ Ley NY 2035', ticker:'AL35', pct:10},
+  {nombre:'Efectivo / MM',            ticker:'CASH', pct:5 },
+];
+
+function renderCarteraRows() {
+  const monto = parseFloat(document.getElementById('cart-monto').value)||10000000;
+  const wrap = document.getElementById('cartera-rows');
+  wrap.innerHTML = carteraRows.map((row,i) => {
+    const bond = BONDS.find(b=>b.t===row.ticker);
+    const tir  = bond ? bond.tir.toFixed(1)+'%' : (row.ticker==='CASH'?'0%':'—');
+    const dur  = bond ? bond.dur.toFixed(2)      : (row.ticker==='CASH'?'0.08':'—');
+    const montoRow = (row.pct/100*monto).toLocaleString('es-AR',{maximumFractionDigits:0});
+    return `<div class="cartera-row-inputs">
+      <input class="mini-input" value="${row.nombre}" oninput="carteraRows[${i}].nombre=this.value;recalcCartera()" placeholder="Nombre bono">
+      <input class="mini-input" value="${row.ticker}" oninput="carteraRows[${i}].ticker=this.value.toUpperCase();recalcCartera()" style="text-transform:uppercase" placeholder="Ticker">
+      <input class="mini-input" type="number" value="${row.pct}" oninput="carteraRows[${i}].pct=parseFloat(this.value)||0;recalcCartera()" min="0" max="100">
+      <input class="mini-input readonly" value="${tir}" readonly>
+      <input class="mini-input readonly" value="${dur}" readonly>
+      <input class="mini-input readonly" value="$${montoRow}" readonly>
+      <button class="btn-del" onclick="delCarteraRow(${i})">✕</button>
+    </div>`;
+  }).join('');
+  recalcCartera();
+}
+
+function addCarteraRow() {
+  carteraRows.push({nombre:'', ticker:'', pct:0});
+  renderCarteraRows();
+}
+
+function delCarteraRow(i) {
+  carteraRows.splice(i,1);
+  renderCarteraRows();
+}
+
+function recalcCartera() {
+  const monto = parseFloat(document.getElementById('cart-monto')?.value)||10000000;
+  let totalPct=0, tirPond=0, durPond=0, durModPond=0, vn=0;
+
+  carteraRows.forEach(row => {
+    const bond = BONDS.find(b=>b.t===row.ticker);
+    const p = row.pct||0;
+    totalPct += p;
+    if (bond) {
+      tirPond    += bond.tir * p/100;
+      durPond    += bond.dur * p/100;
+      durModPond += bond.dm  * p/100;
+      if (bond.p>0) vn += (monto*p/100)/bond.p * 100;
+    } else if (row.ticker==='CASH') {
+      durPond += 0.08 * p/100;
+    }
+  });
+
+  const ok = Math.abs(totalPct-100)<0.01;
+  document.getElementById('ct-pct').textContent   = totalPct.toFixed(1)+'%';
+  document.getElementById('ct-pct').style.color   = ok?'var(--verde)':'var(--rojo)';
+  document.getElementById('ct-tir').textContent   = tirPond.toFixed(2)+'%';
+  document.getElementById('ct-dur').textContent   = durPond.toFixed(2)+'a';
+  document.getElementById('ct-monto').textContent = '$'+(monto*totalPct/100).toLocaleString('es-AR',{maximumFractionDigits:0});
+  document.getElementById('ct-check').innerHTML   = ok?'<span class="badge-ok">✅ Suma 100%</span>':'<span class="badge-bad">⚠ Suma '+totalPct.toFixed(1)+'%</span>';
+
+  document.getElementById('cm-tir').textContent = tirPond.toFixed(2)+'%';
+  document.getElementById('cm-dur').textContent = durPond.toFixed(2)+'a';
+  const dv01total = durModPond * monto/100 * 0.0001;
+  document.getElementById('cm-dv01').textContent = '$'+dv01total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  document.getElementById('cm-vn').textContent   = '$'+vn.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  renderDonut();
+}
+
+function renderDonut() {
+  const canvas = document.getElementById('donut-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=200, H=200, cx=100, cy=100, outerR=80, innerR=52;
+  ctx.clearRect(0,0,W,H);
+
+  const colors = ['#4ea8de','#3dd68c','#e6b84a','#9b7fe8','#e87fb5','#e05c5c','#5ac8fa','#a8d8a8'];
+  const total = carteraRows.reduce((s,r)=>s+(r.pct||0),0)||1;
+  let angle = -Math.PI/2;
+
+  carteraRows.forEach((row,i) => {
+    const sweep = (row.pct/total)*Math.PI*2;
+    if (sweep < 0.01) return;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,outerR,angle,angle+sweep);
+    ctx.closePath();
+    ctx.fillStyle = colors[i%colors.length];
+    ctx.fill();
+
+    // Inner hole
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,innerR,angle,angle+sweep);
+    ctx.closePath();
+    ctx.fillStyle='#12161f';
+    ctx.fill();
+
+    angle += sweep;
+  });
+
+  // Center text
+  ctx.fillStyle='#e8eaf0';
+  ctx.font='bold 12px Inter,sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('Cartera', cx, cy-4);
+  const tir = carteraRows.reduce((s,r)=>{
+    const b=BONDS.find(b=>b.t===r.ticker);
+    return s+(b?b.tir*(r.pct||0)/100:0);
+  },0);
+  ctx.font='bold 16px monospace';
+  ctx.fillStyle='#3dd68c';
+  ctx.fillText(tir.toFixed(1)+'%', cx, cy+14);
+  ctx.font='10px Inter,sans-serif';
+  ctx.fillStyle='#5a6080';
+  ctx.fillText('TIR pond.', cx, cy+28);
+}
+
+/* ══════════════════════════════════════════════════════════
+   MEP & BREAKEVEN
+══════════════════════════════════════════════════════════ */
+function calcMEP() {
+  const pARS = parseFloat(document.getElementById('mep-precio-ars').value)||1;
+  const pUSD = parseFloat(document.getElementById('mep-precio-usd').value)||1;
+  const ratio = parseFloat(document.getElementById('mep-ratio').value)||1;
+  const mep = (pARS / pUSD) * ratio;
+  const brecha = ((mep/CONFIG.tcOficial-1)*100);
+  document.getElementById('mep-result').textContent = '$'+mep.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('mep-brecha-val').textContent = (brecha>0?'+':'')+brecha.toFixed(2)+'% vs oficial';
+  document.getElementById('mep-brecha-val').style.color = brecha>0?'var(--verde)':'var(--rojo)';
+  document.getElementById('mep-ccl').textContent = '$'+(mep*1.05).toFixed(2);
+  document.getElementById('mep-tcof').textContent = '$'+CONFIG.tcOficial.toLocaleString('es-AR');
+}
+
+function calcBreakeven() {
+  const tirTF  = parseFloat(document.getElementById('be-tir-tf').value)||52;
+  const tirCER = parseFloat(document.getElementById('be-tir-cer').value)||5.2;
+  const meses  = parseFloat(document.getElementById('be-meses').value)||12;
+
+  // Breakeven: (1+TNA_TF/12)^meses = (1+inf_m)^meses * (1+TIR_real)^(meses/12)
+  // inf_m mensual: (1+TNA_TF/12) = (1+inf_m)*(1+TIR_real)^(1/12)
+  const factorTF  = Math.pow(1+tirTF/100/12, meses);
+  const factorCER = Math.pow(1+tirCER/100, meses/12);
+  const infM = (factorTF/factorCER) ** (1/meses) - 1;
+  const infA = (Math.pow(1+infM,12)-1)*100;
+
+  document.getElementById('be-inf-m').textContent = (infM*100).toFixed(2)+'% mensual';
+  document.getElementById('be-inf-a').textContent = infA.toFixed(1)+'% anual equiv.';
+  document.getElementById('be-interp').textContent =
+    `CER conviene si la inflación mensual esperada es mayor a ${(infM*100).toFixed(2)}%/mes (${infA.toFixed(1)}% anual).`;
+
+  // Tabla
+  const infRanges = [1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,7,8].map(x=>x/100);
+  const tbody = document.getElementById('be-tbody');
+  tbody.innerHTML = infRanges.map(inf => {
+    const retCER = (Math.pow(1+inf,12)*(1+tirCER/100)-1)*100;
+    const retTF  = (Math.pow(1+tirTF/100/12,12)-1)*100;
+    const cerGana = retCER > retTF;
+    return `<tr>
+      <td>${(inf*100).toFixed(1)}%</td>
+      <td>${tirTF.toFixed(1)}%</td>
+      <td class="${cerGana?'pos':'neg'}">${cerGana?'✅ CER':'❌ TF'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+async function init() {
+  // Intento precios en vivo (falla silenciosamente si no hay internet)
+  fetchLivePrices().then(() => {
+    buildDashboard();
+    buildBondTable();
+  });
+
+  // Render inmediato con datos base
+  buildDashboard();
+  buildBondTable();
+  renderCarteraRows();
+  calcMEP();
+  calcBreakeven();
+
+  // Pre-cargar simulador con AL29
+  document.getElementById('sim-ticker').value = 'AL29';
+  simLookupTicker();
+
+  // Resize handler para el gráfico
+  window.addEventListener('resize', () => {
+    if (document.getElementById('page-dashboard').classList.contains('active')) buildYCChart();
+  });
+}
+
+init();
+</script>
+</body>
+</html>
