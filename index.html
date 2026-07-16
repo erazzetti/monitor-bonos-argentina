@@ -1052,14 +1052,19 @@ function calcDuration(ticker, price, tirDec) {
    Se auto-refresca cada 5 minutos.
 ══════════════════════════════════════════════════════════ */
 
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwLtranFtKqjoSnCT_4gKlk50-rBTJEM0U73Cs0kDu8lb2Z0hRf0EFW0KXhv6xODEh2/exec';
+const PROXY_URL = 'https://iol-proxy.erazzetti.workers.dev';
 
 async function fetchLivePrices() {
   try {
     document.getElementById('precio-status').textContent = 'Conectando IOL…';
     document.getElementById('precio-status').style.color = 'var(--text3)';
 
-    const res = await fetch(PROXY_URL);
+    const res = await fetch(PROXY_URL, {
+      method: 'GET',
+      mode: 'cors',
+      redirect: 'follow',
+      headers: { 'Accept': 'application/json' }
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
