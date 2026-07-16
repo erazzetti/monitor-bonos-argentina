@@ -1054,8 +1054,6 @@ function calcDuration(ticker, price, tirDec) {
 
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwLtranFtKqjoSnCT_4gKlk50-rBTJEM0U73Cs0kDu8lb2Z0hRf0EFW0KXhv6xODEh2/exec';
 
-let livePrices = {};
-
 async function fetchLivePrices() {
   try {
     document.getElementById('precio-status').textContent = 'Conectando IOL…';
