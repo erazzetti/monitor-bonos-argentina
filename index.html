@@ -562,8 +562,13 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     </div>
     <div class="macro-card">
       <div class="label">BADLAR</div>
-      <div class="value c-vio" id="d-badlar">37,0%</div>
+      <div class="value c-vio" id="d-badlar">21,3%</div>
       <div class="sub">Tasa bancos privados TNA</div>
+    </div>
+    <div class="macro-card">
+      <div class="label">Riesgo País</div>
+      <div class="value c-roj" id="d-riesgo">410</div>
+      <div class="sub">EMBI+ JP Morgan (bps)</div>
     </div>
     <div class="macro-card">
       <div class="label">Bonos en tabla</div>
@@ -899,12 +904,13 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
    DATOS BASE (del Excel, v5)
 ══════════════════════════════════════════════════════════ */
 const CONFIG = {
-  tcOficial: 1090,
-  tcMep: 1115,
+  tcOficial: 1495,
+  tcMep: 1512,
   cer: 1.00,
-  inflacion: 3.7,
-  badlar: 37,
-  fecha: '09/04/2025'
+  inflacion: 1.9,
+  badlar: 21.3,
+  riesgoPais: 410,
+  fecha: '16/07/2026'
 };
 
 // Flujos de cada bono para XIRR
@@ -1070,14 +1076,62 @@ async function fetchLivePrices() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Error del proxy');
 
-    // Actualizar MEP desde IOL
+    // Actualizar variables macro desde el Worker
     if (data.mep && data.mep > 0) {
       CONFIG.tcMep = data.mep;
       const mepStr = '$' + data.mep.toLocaleString('es-AR', {maximumFractionDigits:0});
       document.getElementById('tc-mep').textContent   = mepStr;
       document.getElementById('d-tc-mep').textContent = mepStr;
-      const brecha = ((data.mep / CONFIG.tcOficial - 1) * 100).toFixed(1);
+      const brecha = ((data.mep / (data.tcOficial || CONFIG.tcOficial) - 1) * 100).toFixed(1);
       document.getElementById('d-brecha').textContent = brecha + '%';
+    }
+    if (data.tcOficial && data.tcOficial > 0) {
+      CONFIG.tcOficial = data.tcOficial;
+      const tcStr = '$' + data.tcOficial.toLocaleString('es-AR', {maximumFractionDigits:0});
+      document.getElementById('tc-oficial').textContent = tcStr;
+      document.getElementById('d-tc-of').textContent    = tcStr;
+    }
+    if (data.badlar && data.badlar > 0) {
+      CONFIG.badlar = data.badlar;
+      document.getElementById('d-badlar').textContent = data.badlar.toFixed(4) + '%';
+    }
+    if (data.riesgoPais && data.riesgoPais > 0) {
+      document.getElementById('d-riesgo').textContent = data.riesgoPais + ' bps';
+    }
+    if (data.inflacion && data.inflacion > 0) {
+      CONFIG.inflacion = data.inflacion;
+      document.getElementById('d-inf').textContent = data.inflacion.toFixed(1) + '%';
+    }
+
+    // Actualizar TC Oficial
+    if (data.tcOficial && data.tcOficial > 0) {
+      CONFIG.tcOficial = data.tcOficial;
+      const tcStr = '$' + data.tcOficial.toLocaleString('es-AR', {maximumFractionDigits:0});
+      document.getElementById('tc-oficial').textContent = tcStr;
+      document.getElementById('d-tc-of').textContent    = tcStr;
+      if (data.mep) {
+        const brecha = ((data.mep / data.tcOficial - 1) * 100).toFixed(1);
+        document.getElementById('d-brecha').textContent = brecha + '%';
+      }
+    }
+
+    // Actualizar BADLAR
+    if (data.badlar && data.badlar > 0) {
+      CONFIG.badlar = data.badlar;
+      document.getElementById('d-badlar').textContent = data.badlar.toFixed(2) + '%';
+    }
+
+    // Actualizar Riesgo País
+    if (data.riesgoPais && data.riesgoPais > 0) {
+      CONFIG.riesgoPais = data.riesgoPais;
+      const rpEl = document.getElementById('d-riesgo');
+      if (rpEl) rpEl.textContent = Math.round(data.riesgoPais) + ' bps';
+    }
+
+    // Actualizar Inflación
+    if (data.inflacion && data.inflacion > 0) {
+      CONFIG.inflacion = data.inflacion;
+      document.getElementById('d-inf').textContent = data.inflacion.toFixed(1) + '%';
     }
 
     // Cargar precios y actualizar BONDS
@@ -1135,6 +1189,8 @@ function buildDashboard() {
   document.getElementById('d-brecha').textContent = `${brecha}%`;
   document.getElementById('d-inf').textContent    = `${CONFIG.inflacion}%`;
   document.getElementById('d-badlar').textContent = `${CONFIG.badlar}%`;
+  const rpEl = document.getElementById('d-riesgo');
+  if (rpEl) rpEl.textContent = `${CONFIG.riesgoPais || 410} bps`;
   document.getElementById('d-nbonos').textContent = BONDS.length;
   document.getElementById('tc-oficial').textContent = `$${CONFIG.tcOficial.toLocaleString('es-AR')}`;
   document.getElementById('tc-mep').textContent     = `$${CONFIG.tcMep.toLocaleString('es-AR')}`;
