@@ -504,6 +504,117 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
   margin-top: 8px;
   display: none;
 }
+
+/* ── SELECT DROPDOWN ─────────────────────────────────────── */
+.field select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: var(--font-data);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b91a8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.field select:focus { border-color: var(--celeste); }
+.field select option { background: var(--bg2); color: var(--text); }
+.field select optgroup { color: var(--text3); font-style: normal; font-size: 10px; }
+
+/* ── FICHA DE BONO ───────────────────────────────────────── */
+.ficha-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media(max-width:900px){ .ficha-layout { grid-template-columns: 1fr; } }
+
+.ficha-search-list {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.ficha-search-input {
+  width: 100%;
+  background: var(--bg3);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 12px;
+  outline: none;
+}
+.ficha-list { max-height: 520px; overflow-y: auto; }
+.ficha-list-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ficha-list-item:hover { background: var(--bg3); }
+.ficha-list-item.active { background: var(--celeste2); border-left: 2px solid var(--celeste); }
+.ficha-list-item .ft { font-family: var(--font-data); font-weight: 700; font-size: 12px; }
+.ficha-list-item .fn { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.ficha-list-group {
+  padding: 6px 12px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text3);
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+
+.ficha-detail { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; }
+.ficha-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.ficha-ticker { font-family: var(--font-data); font-size: 28px; font-weight: 800; color: var(--celeste); }
+.ficha-name { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.ficha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.ficha-stat { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; }
+.ficha-stat .fl { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+.ficha-stat .fv { font-family: var(--font-data); font-size: 16px; font-weight: 700; margin-top: 2px; }
+.ficha-flow-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+.ficha-flow-table th { background: var(--bg3); color: var(--text3); font-size: 9px; text-transform: uppercase; letter-spacing: .4px; padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+.ficha-flow-table th:first-child { text-align: left; }
+.ficha-flow-table td { padding: 6px 10px; text-align: right; font-family: var(--font-data); border-bottom: 1px solid var(--border); font-size: 11px; }
+.ficha-flow-table td:first-child { text-align: left; color: var(--text2); font-family: inherit; }
+.ficha-flow-table tr.amort-row td { background: rgba(230,184,74,.08); color: var(--oro); }
+.ficha-flow-table tr:last-child td { border-bottom: none; }
+
+/* ── CALENDARIO ──────────────────────────────────────────── */
+.cal-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.cal-nav { display: flex; align-items: center; gap: 8px; }
+.cal-btn { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--r); color: var(--text2); padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all .15s; }
+.cal-btn:hover { border-color: var(--celeste); color: var(--celeste); }
+.cal-month-label { font-family: var(--font-data); font-size: 14px; font-weight: 700; min-width: 140px; text-align: center; }
+.cal-view-btn { padding: 5px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; color: var(--text3); background: var(--bg2); border: 1px solid var(--border); transition: all .15s; }
+.cal-view-btn.active { background: var(--celeste2); color: var(--celeste); border-color: var(--celeste); }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day-header { text-align: center; font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; padding: 6px 0; }
+.cal-day { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; min-height: 80px; padding: 6px; font-size: 10px; }
+.cal-day.empty { background: transparent; border-color: transparent; }
+.cal-day.today { border-color: var(--celeste); }
+.cal-day-num { font-weight: 700; font-size: 11px; margin-bottom: 4px; color: var(--text2); }
+.cal-event { background: var(--celeste2); color: var(--celeste); border-radius: 3px; padding: 1px 4px; margin-bottom: 2px; font-size: 9px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-event.amort { background: rgba(230,184,74,.2); color: var(--oro); }
+.cal-event.coupon { background: rgba(61,214,140,.15); color: var(--verde); }
+
+.cal-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); overflow: auto; }
+.cal-filter { display: flex; gap: 6px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -652,8 +763,10 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
       <div class="panel">
         <div class="panel-title">📌 Selector de bono</div>
         <div class="field">
-          <label>Ticker</label>
-          <input id="sim-ticker" type="text" placeholder="AL29, GD30…" oninput="simLookupTicker()" style="text-transform:uppercase">
+          <label>Seleccioná el bono</label>
+          <select id="sim-ticker" onchange="simLookupTicker()">
+            <option value="">— Elegí un bono —</option>
+          </select>
         </div>
         <div class="field">
           <label>Nombre del bono</label>
@@ -829,20 +942,18 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     <div class="panel">
       <div class="panel-title">💵 Calculadora MEP / CCL implícito</div>
       <div class="field">
-        <label>Ticker versión ARS (ej: AL30D, GD30D)</label>
-        <input id="mep-ticker-ars" type="text" placeholder="AL30D" value="AL30 ARS">
+        <label>Bono para calcular MEP</label>
+        <select id="mep-bono" onchange="mepOnBondChange()">
+          <option value="">— Elegí un bono —</option>
+        </select>
       </div>
       <div class="field">
-        <label>Precio en pesos (ARS)</label>
-        <input id="mep-precio-ars" type="number" value="5621.5" oninput="calcMEP()">
+        <label>Precio en pesos (ARS) <span style="color:var(--text3);font-size:10px">← editable</span></label>
+        <input id="mep-precio-ars" type="number" oninput="calcMEP()">
       </div>
       <div class="field">
-        <label>Ticker versión USD (ej: AL30)</label>
-        <input id="mep-ticker-usd" type="text" placeholder="AL30" value="AL30">
-      </div>
-      <div class="field">
-        <label>Precio en USD</label>
-        <input id="mep-precio-usd" type="number" value="56.8" oninput="calcMEP()">
+        <label>Precio en USD <span style="color:var(--text3);font-size:10px">← editable</span></label>
+        <input id="mep-precio-usd" type="number" oninput="calcMEP()">
       </div>
       <div class="field">
         <label>Ratio de conversión (generalmente 1)</label>
@@ -1143,7 +1254,13 @@ async function fetchLivePrices() {
       }
     });
 
-    BONDS.forEach(b => { if (livePrices[b.t]) b.p = livePrices[b.t]; });
+    BONDS.forEach(b => {
+      if (livePrices[b.t]) {
+        b.p = livePrices[b.t];
+        if (data.precios[b.t]?.pARS) b.pARS = data.precios[b.t].pARS;
+        if (data.precios[b.t]?.v !== null) b.variacion = data.precios[b.t].v;
+      }
+    });
 
     document.getElementById('precio-status').textContent = `IOL ✓ (${actualizados} bonos)`;
     document.getElementById('precio-status').style.color = 'var(--verde)';
@@ -1176,6 +1293,9 @@ function showPage(name) {
   event.target.classList.add('active');
   if (name==='cartera') renderDonut();
   if (name==='mep') { calcMEP(); calcBreakeven(); }
+  if (name==='fichas') { buildFichaList(); if(fichaActiveTicker) fichaShowBond(fichaActiveTicker); }
+  if (name==='calendario') buildCalendar();
+  if (name==='dashboard') buildYCChart();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1238,7 +1358,7 @@ function buildDashboard() {
 
 function goBonos(filter) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab')[1].classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach((t,i) => { if(i===1) t.classList.add('active'); });
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-bonos').classList.add('active');
   setFilter(filter, document.querySelectorAll('.filter-btn')[['todos','HD NY','HD Arg','TF','CER','Dual','BOPREAL','DL'].indexOf(filter)]);
@@ -1339,7 +1459,7 @@ function renderBondTable(bonds) {
   tbody.innerHTML = bonds.map(b => {
     const barW = Math.round((b.tir/maxTIR)*100);
     return `<tr onclick="openSim('${b.t}')">
-      <td><span class="td-ticker">${b.t}</span></td>
+      <td><span class="td-ticker" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--celeste)" onclick="event.stopPropagation();openFicha('${b.t}')" title="Ver ficha">${b.t}</span></td>
       <td class="td-name">${b.n}</td>
       <td><span class="tag ${b.tag}">${b.s}</span></td>
       <td class="td-num">${b.p.toLocaleString('es-AR',{maximumFractionDigits:2})}</td>
@@ -1380,24 +1500,70 @@ let simBond = null;
 
 function openSim(ticker) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab')[2].classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach((t,i) => { if(i===2) t.classList.add('active'); });
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-simulador').classList.add('active');
   document.getElementById('sim-ticker').value = ticker;
   simLookupTicker();
+  // Also highlight in ficha
+  fichaShowBond(ticker);
+}
+
+// Populates the simulator and MEP dropdowns with bond data
+function buildDropdowns() {
+  const simSel = document.getElementById('sim-ticker');
+  const mepSel = document.getElementById('mep-bono');
+
+  const segments = ['HD NY','HD Arg','TF','CER','Dual','BOPREAL','DL'];
+  const segLabels = { 'HD NY':'Hard Dollar Ley NY','HD Arg':'Hard Dollar Ley Arg','TF':'Tasa Fija','CER':'Bonos CER','Dual':'Bonos Duales','BOPREAL':'BOPREAL','DL':'Dollar-Linked' };
+  const mepSegments = ['HD NY','HD Arg','BOPREAL']; // only USD bonds for MEP
+
+  // Clear and rebuild
+  simSel.innerHTML = '<option value="">— Elegí un bono —</option>';
+  mepSel.innerHTML = '<option value="">— Elegí un bono —</option>';
+
+  segments.forEach(seg => {
+    const bonds = BONDS.filter(b => b.s === seg);
+    if (!bonds.length) return;
+
+    // Simulator: all bonds
+    const og = document.createElement('optgroup');
+    og.label = segLabels[seg] || seg;
+    bonds.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.t;
+      opt.textContent = `${b.t} — ${b.n}`;
+      og.appendChild(opt);
+    });
+    simSel.appendChild(og);
+
+    // MEP: only USD bonds
+    if (mepSegments.includes(seg)) {
+      const og2 = document.createElement('optgroup');
+      og2.label = segLabels[seg] || seg;
+      bonds.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.t;
+        opt.textContent = `${b.t} — ${b.n}`;
+        og2.appendChild(opt);
+      });
+      mepSel.appendChild(og2);
+    }
+  });
 }
 
 function simLookupTicker() {
-  const t = document.getElementById('sim-ticker').value.toUpperCase().trim();
-  const bond = BONDS.find(b=>b.t===t);
+  const sel = document.getElementById('sim-ticker');
+  const t = sel.value;
   const err = document.getElementById('sim-error');
   const res = document.getElementById('sim-results');
+  const bond = BONDS.find(b=>b.t===t);
 
-  if (!bond) {
+  if (!bond || !t) {
     document.getElementById('sim-nombre').value = '';
     document.getElementById('sim-precio').value = '';
     document.getElementById('sim-precio-ref').value = '';
-    err.style.display = bond===undefined && t ? 'block' : 'none';
+    err.style.display = 'none';
     res.style.display = 'none';
     simBond = null;
     return;
@@ -1406,7 +1572,7 @@ function simLookupTicker() {
   simBond = bond;
   document.getElementById('sim-nombre').value = bond.n;
   document.getElementById('sim-precio').value = bond.p;
-  document.getElementById('sim-precio-ref').value = `${bond.p} (precio base ${CONFIG.fecha})`;
+  document.getElementById('sim-precio-ref').value = `${bond.p.toFixed(2)} (precio actual)`;
   simRecalc();
 }
 
@@ -1690,6 +1856,276 @@ function calcBreakeven() {
 /* ══════════════════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   MEP — Bond selector handler
+══════════════════════════════════════════════════════════ */
+function mepOnBondChange() {
+  const ticker = document.getElementById('mep-bono').value;
+  if (!ticker) return;
+  const bond = BONDS.find(b => b.t === ticker);
+  if (!bond) return;
+  // Set ARS price: bond.pARS if available, else bond.p * MEP
+  const pARS = bond.pARS || (bond.p * CONFIG.tcMep);
+  const pUSD = bond.p;
+  document.getElementById('mep-precio-ars').value = pARS.toFixed(2);
+  document.getElementById('mep-precio-usd').value = pUSD.toFixed(4);
+  calcMEP();
+}
+
+/* ══════════════════════════════════════════════════════════
+   FICHAS DE BONOS — JS
+══════════════════════════════════════════════════════════ */
+// Bond emission details (condiciones de emisión)
+const BOND_INFO = {
+  AL29:{ ley:'Nueva York', moneda:'USD', emision:'2020-09-04', vcto:'2029-07-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Escalonada (4%-8%-4%-12%-10%-62%)', garante:'Rep. Argentina' },
+  AL30:{ ley:'Nueva York', moneda:'USD', emision:'2020-09-04', vcto:'2030-07-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Escalonada (4%-8%-4%-12%-10%-10%-52%)', garante:'Rep. Argentina' },
+  AL35:{ ley:'Nueva York', moneda:'USD', emision:'2020-09-04', vcto:'2035-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Escalonada múltiple 2029-2035', garante:'Rep. Argentina' },
+  AL38:{ ley:'Nueva York', moneda:'USD', emision:'2020-09-04', vcto:'2038-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Bullet (100% al vto)', garante:'Rep. Argentina' },
+  AL41:{ ley:'Nueva York', moneda:'USD', emision:'2020-09-04', vcto:'2041-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Bullet (100% al vto)', garante:'Rep. Argentina' },
+  AL46:{ ley:'Nueva York', moneda:'USD', emision:'2020-09-04', vcto:'2046-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Bullet (100% al vto)', garante:'Rep. Argentina' },
+  GD29:{ ley:'Argentina',  moneda:'USD', emision:'2020-09-04', vcto:'2029-07-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Escalonada (igual a AL29)', garante:'Rep. Argentina' },
+  GD30:{ ley:'Argentina',  moneda:'USD', emision:'2020-09-04', vcto:'2030-07-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Escalonada (igual a AL30)', garante:'Rep. Argentina' },
+  GD35:{ ley:'Argentina',  moneda:'USD', emision:'2020-09-04', vcto:'2035-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Escalonada múltiple 2029-2035', garante:'Rep. Argentina' },
+  GD38:{ ley:'Argentina',  moneda:'USD', emision:'2020-09-04', vcto:'2038-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Bullet (100% al vto)', garante:'Rep. Argentina' },
+  GD41:{ ley:'Argentina',  moneda:'USD', emision:'2020-09-04', vcto:'2041-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Bullet (100% al vto)', garante:'Rep. Argentina' },
+  GD46:{ ley:'Argentina',  moneda:'USD', emision:'2020-09-04', vcto:'2046-01-31', cupon:'Step-up 0.125%→4.25%', freq:'Semestral (ene/jul)', amort:'Bullet (100% al vto)', garante:'Rep. Argentina' },
+  S31M5:{ ley:'Argentina', moneda:'ARS', emision:'2024-09-16', vcto:'2025-03-31', cupon:'Capitalizable (zero coupon)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  S30J5:{ ley:'Argentina', moneda:'ARS', emision:'2024-12-16', vcto:'2025-06-30', cupon:'Capitalizable (zero coupon)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  S30S5:{ ley:'Argentina', moneda:'ARS', emision:'2025-03-17', vcto:'2025-09-30', cupon:'Capitalizable (zero coupon)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  T30E6:{ ley:'Argentina', moneda:'ARS', emision:'2025-04-14', vcto:'2026-01-30', cupon:'Capitalizable (zero coupon)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  T31M6:{ ley:'Argentina', moneda:'ARS', emision:'2025-06-16', vcto:'2026-03-31', cupon:'Capitalizable (zero coupon)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  TX25:{ ley:'Argentina',  moneda:'ARS', emision:'2016-10-18', vcto:'2025-10-15', cupon:'0% (ajusta por CER)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  TX26:{ ley:'Argentina',  moneda:'ARS', emision:'2020-07-07', vcto:'2026-02-23', cupon:'2.5% s/capital ajustado CER', freq:'Anual', amort:'Bullet', garante:'Rep. Argentina' },
+  TX27:{ ley:'Argentina',  moneda:'ARS', emision:'2021-02-11', vcto:'2026-11-20', cupon:'5.0% s/capital ajustado CER', freq:'Anual', amort:'Bullet', garante:'Rep. Argentina' },
+  DICP:{ ley:'Argentina',  moneda:'ARS', emision:'2005-06-02', vcto:'2033-12-31', cupon:'5.83% s/capital ajustado CER', freq:'Anual', amort:'Escalonada 2025-2033', garante:'Rep. Argentina' },
+  PARP:{ ley:'Argentina',  moneda:'ARS', emision:'2005-06-02', vcto:'2038-12-31', cupon:'0% (ajusta por CER)', freq:'Al vencimiento', amort:'Escalonada 2025-2038', garante:'Rep. Argentina' },
+  TDJ25:{ ley:'Argentina', moneda:'ARS', emision:'2024-06-17', vcto:'2025-06-30', cupon:'Max(CER, Dollar-Linked)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  TDL25:{ ley:'Argentina', moneda:'ARS', emision:'2024-07-12', vcto:'2025-07-31', cupon:'Max(CER, Dollar-Linked)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  BPJ27:{ ley:'Argentina', moneda:'USD', emision:'2024-02-01', vcto:'2027-01-31', cupon:'3.0% TNA sobre saldo', freq:'Trimestral', amort:'Escalonada trim. 2025-2027', garante:'BCRA' },
+  BPO28:{ ley:'Argentina', moneda:'USD', emision:'2024-02-01', vcto:'2028-10-31', cupon:'3.0% TNA sobre saldo', freq:'Semestral', amort:'Bullet', garante:'BCRA' },
+  BPY26:{ ley:'Argentina', moneda:'USD', emision:'2024-02-01', vcto:'2026-06-30', cupon:'0% (zero coupon)', freq:'Al vencimiento', amort:'Bullet', garante:'BCRA' },
+  BPD26:{ ley:'Argentina', moneda:'USD', emision:'2024-02-01', vcto:'2026-05-31', cupon:'3.0% TNA sobre saldo', freq:'Semestral', amort:'Bullet', garante:'BCRA' },
+  T2V5:{ ley:'Argentina',  moneda:'ARS', emision:'2024-04-29', vcto:'2025-04-30', cupon:'0% (ajusta por TC oficial)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+  T2V6:{ ley:'Argentina',  moneda:'ARS', emision:'2025-04-28', vcto:'2026-04-30', cupon:'0% (ajusta por TC oficial)', freq:'Al vencimiento', amort:'Bullet', garante:'Rep. Argentina' },
+};
+
+let fichaActiveTicker = null;
+
+function buildFichaList() {
+  renderFichaList('');
+}
+
+function fichaFilter() {
+  const q = document.getElementById('ficha-search').value.toLowerCase();
+  renderFichaList(q);
+}
+
+function renderFichaList(q) {
+  const list = document.getElementById('ficha-list');
+  const segments = ['HD NY','HD Arg','TF','CER','Dual','BOPREAL','DL'];
+  const segLabels = { 'HD NY':'Hard Dollar Ley NY','HD Arg':'Hard Dollar Ley Arg','TF':'Tasa Fija','CER':'Bonos CER','Dual':'Bonos Duales','BOPREAL':'BOPREAL','DL':'Dollar-Linked' };
+  let html = '';
+  segments.forEach(seg => {
+    const bonds = BONDS.filter(b => b.s === seg && (!q || b.t.toLowerCase().includes(q) || b.n.toLowerCase().includes(q)));
+    if (!bonds.length) return;
+    html += `<div class="ficha-list-group">${segLabels[seg]}</div>`;
+    bonds.forEach(b => {
+      const active = b.t === fichaActiveTicker ? ' active' : '';
+      html += `<div class="ficha-list-item${active}" onclick="fichaShowBond('${b.t}')">
+        <div><div class="ft">${b.t}</div><div class="fn">${b.n}</div></div>
+        <span class="tag ${b.tag}" style="font-size:9px">${b.s}</span>
+      </div>`;
+    });
+  });
+  list.innerHTML = html;
+}
+
+function fichaShowBond(ticker) {
+  fichaActiveTicker = ticker;
+  renderFichaList(document.getElementById('ficha-search')?.value?.toLowerCase() || '');
+
+  const bond = BONDS.find(b => b.t === ticker);
+  const info = BOND_INFO[ticker] || {};
+  const bf   = BOND_FLOWS[ticker];
+  if (!bond) return;
+
+  const tirDec = calcXIRR(ticker, bond.p) ?? 0;
+  const dur    = calcDuration(ticker, bond.p, tirDec) ?? bond.dur;
+  const durMod = tirDec ? dur/(1+tirDec) : bond.dm;
+
+  // Build cashflow table
+  let flowRows = '';
+  if (bf) {
+    const today = new Date();
+    let outstanding = 100;
+    bf.dates.forEach((d, i) => {
+      const flow = bf.flows[i];
+      // Approximate: if amort in flow, mark it
+      const isAmort = flow > 3 && (flow > outstanding * 0.03);
+      const cls = isAmort ? ' class="amort-row"' : '';
+      const dt = new Date(d);
+      const isPast = dt < today;
+      flowRows += `<tr${cls} style="${isPast?'opacity:.4':''}">
+        <td>${d}</td>
+        <td style="text-align:right">${outstanding.toFixed(4)}</td>
+        <td style="text-align:right;color:var(--verde)">${flow.toFixed(4)}</td>
+      </tr>`;
+    });
+  }
+
+  document.getElementById('ficha-detail').innerHTML = `
+    <div class="ficha-detail">
+      <div class="ficha-header">
+        <div>
+          <div class="ficha-ticker">${bond.t}</div>
+          <div class="ficha-name">${bond.n}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-data);font-size:20px;font-weight:800;color:var(--verde)">${(tirDec*100).toFixed(2)}%</div>
+          <div style="font-size:10px;color:var(--text3)">TIR exacta (XIRR)</div>
+          <button onclick="openSim('${bond.t}')" style="margin-top:8px;background:var(--celeste);color:var(--bg);border:none;border-radius:4px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">Abrir en Simulador →</button>
+        </div>
+      </div>
+
+      <div class="ficha-grid">
+        <div class="ficha-stat"><div class="fl">Precio actual</div><div class="fv c-cel">${bond.p.toFixed(2)}</div></div>
+        <div class="ficha-stat"><div class="fl">Duration Mac.</div><div class="fv">${dur.toFixed(2)}a</div></div>
+        <div class="ficha-stat"><div class="fl">Duration Mod.</div><div class="fv">${durMod.toFixed(2)}</div></div>
+        <div class="ficha-stat"><div class="fl">Paridad</div><div class="fv">${bond.par.toFixed(1)}%</div></div>
+        <div class="ficha-stat"><div class="fl">Val. Residual</div><div class="fv">${bond.res}%</div></div>
+        <div class="ficha-stat"><div class="fl">Vencimiento</div><div class="fv" style="font-size:12px">${bond.vcto.slice(0,7)}</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:4px">Condiciones de emisión</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:12px">
+        <div><span style="color:var(--text3)">Ley aplicable: </span>${info.ley||'—'}</div>
+        <div><span style="color:var(--text3)">Moneda: </span>${info.moneda||bond.s.includes('HD')||bond.s==='BOPREAL'?'USD':'ARS'}</div>
+        <div><span style="color:var(--text3)">Fecha emisión: </span>${info.emision||'—'}</div>
+        <div><span style="color:var(--text3)">Vencimiento: </span>${info.vcto||bond.vcto}</div>
+        <div><span style="color:var(--text3)">Cupón: </span>${info.cupon||'—'}</div>
+        <div><span style="color:var(--text3)">Frecuencia pago: </span>${info.freq||'—'}</div>
+        <div><span style="color:var(--text3)">Amortización: </span>${info.amort||'—'}</div>
+        <div><span style="color:var(--text3)">Garante: </span>${info.garante||'—'}</div>
+      </div>
+
+      <div class="section-title">Flujo de fondos (sobre VN=100)</div>
+      <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r)">
+        <table class="ficha-flow-table">
+          <thead><tr><th>Fecha</th><th>Saldo Inic.</th><th>Flujo Total</th></tr></thead>
+          <tbody>${flowRows || '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Sin flujos definidos</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function openFicha(ticker) {
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach((t,i) => { if(i===5) t.classList.add('active'); });
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-fichas').classList.add('active');
+  fichaShowBond(ticker);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CALENDARIO DE PAGOS — JS
+══════════════════════════════════════════════════════════ */
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-based
+let calView  = 'month';
+
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAY_NAMES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+// Build all payment events from BOND_FLOWS
+function getCalEvents() {
+  const events = [];
+  BONDS.forEach(bond => {
+    const bf = BOND_FLOWS[bond.t];
+    if (!bf) return;
+    let outstanding = 100;
+    bf.dates.forEach((d, i) => {
+      const flow = bf.flows[i];
+      const dt = new Date(d);
+      // Approximate amort detection
+      const amortAmt = flow > outstanding * 0.015 && flow > 2 ? flow : 0;
+      const couponAmt = flow - amortAmt;
+      const type = amortAmt > 0 && couponAmt > 0.01 ? 'both' : amortAmt > 0 ? 'amort' : 'coupon';
+      events.push({ date: d, dt, ticker: bond.t, name: bond.n, flow, type, outstanding: outstanding.toFixed(2) });
+      if (amortAmt > 0) outstanding = Math.max(0, outstanding - amortAmt);
+    });
+  });
+  return events.sort((a,b) => a.dt - b.dt);
+}
+
+function buildCalendar() {
+  document.getElementById('cal-label').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+  if (calView === 'month') buildCalMonth();
+  else buildCalList();
+}
+
+function buildCalMonth() {
+  // Headers
+  const hdr = document.getElementById('cal-headers');
+  hdr.innerHTML = DAY_NAMES.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  const grid = document.getElementById('cal-grid');
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date();
+  const events = getCalEvents().filter(e => e.dt.getFullYear()===calYear && e.dt.getMonth()===calMonth);
+
+  let html = '';
+  // Empty cells before first day
+  for (let i=0; i<firstDay; i++) html += '<div class="cal-day empty"></div>';
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const isToday = today.getDate()===d && today.getMonth()===calMonth && today.getFullYear()===calYear;
+    const dayEvents = events.filter(e => e.dt.getDate()===d);
+    let evHtml = '';
+    // Group by ticker to avoid repetition
+    const tickers = [...new Set(dayEvents.map(e=>e.ticker))];
+    tickers.slice(0,4).forEach(t => {
+      const ev = dayEvents.find(e=>e.ticker===t);
+      evHtml += `<div class="cal-event ${ev.type}" title="${t}: ${ev.flow.toFixed(2)} sobre 100">${t}</div>`;
+    });
+    if (tickers.length > 4) evHtml += `<div style="font-size:9px;color:var(--text3)">+${tickers.length-4} más</div>`;
+    html += `<div class="cal-day${isToday?' today':''}"><div class="cal-day-num">${d}</div>${evHtml}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function buildCalList() {
+  const today = new Date();
+  const events = getCalEvents().filter(e => e.dt >= today);
+  const tbody = document.getElementById('cal-list-body');
+  tbody.innerHTML = events.slice(0, 120).map(e => {
+    const color = e.type==='amort'?'var(--oro)':e.type==='both'?'var(--celeste)':'var(--verde)';
+    const label = e.type==='amort'?'Amortización':e.type==='both'?'Cupón + Amort':'Cupón';
+    return `<tr>
+      <td>${e.date}</td>
+      <td><span style="font-family:var(--font-data);font-weight:700">${e.ticker}</span></td>
+      <td><span style="color:${color}">${label}</span></td>
+      <td>${e.outstanding}</td>
+      <td>${e.type==='amort'?'—':e.flow.toFixed(4)}</td>
+      <td>${e.type==='coupon'?'—':e.flow.toFixed(4)}</td>
+      <td style="color:var(--verde);font-weight:700">${e.flow.toFixed(4)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function calPrev()  { calMonth--; if (calMonth<0){calMonth=11;calYear--;} buildCalendar(); }
+function calNext()  { calMonth++; if (calMonth>11){calMonth=0;calYear++;} buildCalendar(); }
+function calToday() { calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); buildCalendar(); }
+
+function calSetView(v, el) {
+  calView = v;
+  document.querySelectorAll('.cal-view-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('cal-month-view').style.display = v==='month'?'block':'none';
+  document.getElementById('cal-list-view').style.display  = v==='list'?'block':'none';
+  buildCalendar();
+}
+
 async function init() {
   // Render inmediato con datos base (sin esperar IOL)
   buildDashboard();
@@ -1710,8 +2146,11 @@ async function init() {
   calcBreakeven();
 
   // Pre-cargar simulador con AL29
+  buildDropdowns();
   document.getElementById('sim-ticker').value = 'AL29';
   simLookupTicker();
+  buildFichaList();
+  buildCalendar();
 
   // Resize handler para el gráfico
   window.addEventListener('resize', () => {
@@ -1721,5 +2160,50 @@ async function init() {
 
 init();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: FICHAS DE BONOS
+═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-fichas">
+  <div class="ficha-layout">
+    <!-- Lista izquierda -->
+    <div class="ficha-search-list">
+      <input class="ficha-search-input" id="ficha-search" placeholder="🔍  Buscar ticker o nombre…" oninput="fichaFilter()">
+      <div class="ficha-list" id="ficha-list"></div>
+    </div>
+    <!-- Detalle derecho -->
+    <div id="ficha-detail">
+      <div class="ficha-empty">← Seleccioná un bono para ver su ficha</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: CALENDARIO DE PAGOS
+═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-calendario">
+  <div class="cal-controls">
+    <button class="cal-btn" onclick="calPrev()">◀</button>
+    <div class="cal-month-label" id="cal-label">Julio 2026</div>
+    <button class="cal-btn" onclick="calNext()">▶</button>
+    <button class="cal-btn" onclick="calToday()">Hoy</button>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="cal-view-btn active" id="cal-v-month" onclick="calSetView('month',this)">Calendario</button>
+      <button class="cal-view-btn" id="cal-v-list" onclick="calSetView('list',this)">Lista</button>
+    </div>
+  </div>
+  <div id="cal-month-view">
+    <div class="cal-grid" id="cal-headers"></div>
+    <div class="cal-grid" id="cal-grid" style="margin-top:3px"></div>
+  </div>
+  <div id="cal-list-view" style="display:none">
+    <div class="table-wrap">
+      <table class="small-table">
+        <thead><tr><th>Fecha</th><th>Bono</th><th>Tipo</th><th style="text-align:right">Saldo Inic.</th><th style="text-align:right">Interés</th><th style="text-align:right">Amort.</th><th style="text-align:right">Flujo Total</th></tr></thead>
+        <tbody id="cal-list-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 </body>
 </html>
