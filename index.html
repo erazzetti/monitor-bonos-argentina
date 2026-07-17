@@ -90,7 +90,9 @@ body {
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  scrollbar-width: none;
 }
+.nav::-webkit-scrollbar { display: none; }
 .nav-tab {
   padding: 10px 16px;
   font-size: 12px;
@@ -1922,6 +1924,7 @@ function fichaFilter() {
 
 function renderFichaList(q) {
   const list = document.getElementById('ficha-list');
+  if (!list) return;
   const segments = ['HD NY','HD Arg','TF','CER','Dual','BOPREAL','DL'];
   const segLabels = { 'HD NY':'Hard Dollar Ley NY','HD Arg':'Hard Dollar Ley Arg','TF':'Tasa Fija','CER':'Bonos CER','Dual':'Bonos Duales','BOPREAL':'BOPREAL','DL':'Dollar-Linked' };
   let html = '';
@@ -2058,7 +2061,9 @@ function getCalEvents() {
 }
 
 function buildCalendar() {
-  document.getElementById('cal-label').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+  const label = document.getElementById('cal-label');
+  if (!label) return;
+  label.textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
   if (calView === 'month') buildCalMonth();
   else buildCalList();
 }
@@ -2149,8 +2154,8 @@ async function init() {
   buildDropdowns();
   document.getElementById('sim-ticker').value = 'AL29';
   simLookupTicker();
-  buildFichaList();
-  buildCalendar();
+  // Defer ficha/calendar build until after DOM is fully rendered
+  setTimeout(() => { buildFichaList(); buildCalendar(); }, 100);
 
   // Resize handler para el gráfico
   window.addEventListener('resize', () => {
