@@ -738,13 +738,13 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
           <th onclick="sortTable('nombre')">Nombre ↕</th>
           <th>Segmento</th>
           <th onclick="sortTable('precio')" style="text-align:right">Precio ↕</th>
+          <th style="text-align:right">Var %</th>
           <th onclick="sortTable('tir')" style="text-align:right">TIR % ↕</th>
           <th onclick="sortTable('duration')" style="text-align:right">Dur (Mac) ↕</th>
           <th style="text-align:right">Dur Mod</th>
           <th style="text-align:right">Paridad %</th>
           <th style="text-align:right">V.Residual</th>
           <th style="text-align:right">Vol $mm</th>
-          <th>TIR (visual)</th>
           <th>Vcto</th>
         </tr>
       </thead>
@@ -1476,23 +1476,27 @@ function renderBondTable(bonds) {
   const maxTIR = Math.max(...BONDS.map(b=>b.tir));
   const tbody = document.getElementById('bond-tbody');
   tbody.innerHTML = bonds.map(b => {
-    const barW = Math.round((b.tir/maxTIR)*100);
+    // Variation indicator
+    const v = b.variacion;
+    let varHtml = '<span style="color:var(--text3)">—</span>';
+    if (v !== null && v !== undefined) {
+      const vNum = parseFloat(v);
+      if (vNum > 0)       varHtml = `<span style="color:var(--verde)">▲ ${vNum.toFixed(2)}%</span>`;
+      else if (vNum < 0)  varHtml = `<span style="color:var(--rojo)">▼ ${Math.abs(vNum).toFixed(2)}%</span>`;
+      else                varHtml = `<span style="color:var(--text3)">= 0.00%</span>`;
+    }
     return `<tr onclick="openSim('${b.t}')">
       <td><span class="td-ticker" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--celeste)" onclick="event.stopPropagation();openFicha('${b.t}')" title="Ver ficha">${b.t}</span></td>
       <td class="td-name">${b.n}</td>
       <td><span class="tag ${b.tag}">${b.s}</span></td>
       <td class="td-num">${b.p.toLocaleString('es-AR',{maximumFractionDigits:2})}</td>
+      <td class="td-num" style="font-family:var(--font-data);font-size:11px">${varHtml}</td>
       <td class="td-num tir-val" style="color:var(--verde)">${b.tir.toFixed(1)}%</td>
       <td class="td-num">${b.dur.toFixed(2)}</td>
       <td class="td-num">${b.dm.toFixed(2)}</td>
       <td class="td-num">${b.par.toFixed(1)}%</td>
       <td class="td-num">${b.res}%</td>
       <td class="td-num">${b.vol}</td>
-      <td style="min-width:80px">
-        <div class="bar-cell">
-          <div class="mini-bar-bg"><div class="mini-bar" style="width:${barW}%;background:var(--verde)"></div></div>
-        </div>
-      </td>
       <td class="td-num" style="color:var(--text3);font-size:10px">${b.vcto.slice(0,7)}</td>
     </tr>`;
   }).join('');
